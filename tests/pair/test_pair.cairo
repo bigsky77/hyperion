@@ -31,7 +31,7 @@ func __setup__{syscall_ptr : felt*}():
     
     tempvar token_a
     tempvar token_b
-    
+    tempvar hyperion    
     %{
         ids.token_a = deploy_contract(
             "./lib/cairo_contracts/src/openzeppelin/token/erc20/presets/ERC20.cairo", 
@@ -42,6 +42,7 @@ func __setup__{syscall_ptr : felt*}():
             "./lib/cairo_contracts/src/openzeppelin/token/erc20/presets/ERC20.cairo", 
             [ids.TOKEN_NAME_B, ids.SYMBOL_B, ids.DECIMALS, ids.SUPPLY_LO, ids.SUPPLY_HI, ids.USER]).contract_address
         context.token_b = ids.token_b
+
     %}
 
     return()

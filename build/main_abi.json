@@ -10,11 +10,11 @@
                 "type": "felt"
             },
             {
-                "name": "factory",
+                "name": "factory_address",
                 "type": "felt"
             },
             {
-                "name": "_A",
+                "name": "A",
                 "type": "felt"
             },
             {
@@ -29,5 +29,69 @@
         "name": "constructor",
         "outputs": [],
         "type": "constructor"
+    },
+    {
+        "inputs": [],
+        "name": "get_A",
+        "outputs": [
+            {
+                "name": "res",
+                "type": "felt"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "getA",
+        "outputs": [
+            {
+                "name": "res",
+                "type": "felt"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "get_A_precise",
+        "outputs": [
+            {
+                "name": "res",
+                "type": "felt"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "_xp",
+        "outputs": [
+            {
+                "name": "xp_len",
+                "type": "felt"
+            },
+            {
+                "name": "xp",
+                "type": "felt*"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "get_D",
+        "outputs": [
+            {
+                "name": "res",
+                "type": "felt"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
     }
 ]
