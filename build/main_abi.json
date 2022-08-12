@@ -1,0 +1,33 @@
+[
+    {
+        "inputs": [
+            {
+                "name": "token_a_address",
+                "type": "felt"
+            },
+            {
+                "name": "token_b_address",
+                "type": "felt"
+            },
+            {
+                "name": "factory",
+                "type": "felt"
+            },
+            {
+                "name": "_A",
+                "type": "felt"
+            },
+            {
+                "name": "_fee",
+                "type": "felt"
+            },
+            {
+                "name": "_admin_fee",
+                "type": "felt"
+            }
+        ],
+        "name": "constructor",
+        "outputs": [],
+        "type": "constructor"
+    }
+]
