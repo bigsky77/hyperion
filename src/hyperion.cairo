@@ -69,8 +69,7 @@ func constructor{
         range_check_ptr
 }(
         token_a_address : felt,
-        token_b_address : felt,
-        factory_address : felt,
+        token_b_address : felt, 
         A : felt,
         _fee : felt,
         _admin_fee : felt,
@@ -91,7 +90,6 @@ func constructor{
        future_a_time = 0, # hack
     )
 
-    factory.write(value=factory_address)
     fee.write(_fee)
     admin_fee.write(_admin_fee)
 
@@ -150,18 +148,6 @@ func getA{
     return(x / y.precision)
 end
 
-# probably don't need this function
-@view
-func get_A_precise{
-        syscall_ptr : felt*,
-        pedersen_ptr : HashBuiltin*,
-        range_check_ptr,
-}() -> (res :felt):
-    alloc_locals
-    let(local x) = get_A()
-    return(x)
-end
-
 @view
 func _xp{
         syscall_ptr : felt*,
@@ -176,7 +162,7 @@ func _xp{
     let (local xp : felt*) = alloc()
 
     # hack needs to be dynamic (also need to find the syntax for res.length)
-    let xp_len = N_COINS
+    let (xp_len) = xp.SIZE 
     assert [xp + 0] = (RATES * token_a) / PRECISION
     assert [xp + 1] = (RATES * token_b) / PRECISION
     
@@ -229,31 +215,31 @@ func get_D{
 end
 
 ### ============= utils ==============
-
+@view
 func calc_D_P{
         syscall_ptr : felt*,
         pedersen_ptr : HashBuiltin*,
         range_check_ptr,
-}(arr_len : felt, xp : felt*, D : felt, D_P : felt) -> (res : felt):
+}(xp_len : felt, xp : felt*, D : felt, D_P : felt) -> (res : felt):
     alloc_locals
 
-    if arr_len == 0:
+    if xp_len == 0:
         return(res=0)
     end
 
-    let _xp = xp[arr_len]
+    let _xp = xp[xp_len]
     let new_D_P = (D_P * D) / (_xp * N_COINS) 
     
     if new_D_P == 0:
-        let (y) = calc_D_P(arr_len - 1, xp, D, D)     
+        let (y) = calc_D_P(xp_len - 1, xp, D, D)     
         return(y)
     end
     
-    let (x) = calc_D_P(arr_len - 1, xp, D, D_P)
+    let (x) = calc_D_P(xp_len - 1, xp, D, D_P)
     return(x)
 end
 
-
+@view
 func arr_sum{
         syscall_ptr : felt*,
         pedersen_ptr : HashBuiltin*,

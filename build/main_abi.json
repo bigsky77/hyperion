@@ -10,10 +10,6 @@
                 "type": "felt"
             },
             {
-                "name": "factory_address",
-                "type": "felt"
-            },
-            {
                 "name": "A",
                 "type": "felt"
             },
@@ -88,6 +84,56 @@
         "outputs": [
             {
                 "name": "res",
+                "type": "felt"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "name": "xp_len",
+                "type": "felt"
+            },
+            {
+                "name": "xp",
+                "type": "felt*"
+            },
+            {
+                "name": "D",
+                "type": "felt"
+            },
+            {
+                "name": "D_P",
+                "type": "felt"
+            }
+        ],
+        "name": "calc_D_P",
+        "outputs": [
+            {
+                "name": "res",
+                "type": "felt"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "name": "arr_len",
+                "type": "felt"
+            },
+            {
+                "name": "arr",
+                "type": "felt*"
+            }
+        ],
+        "name": "arr_sum",
+        "outputs": [
+            {
+                "name": "sum",
                 "type": "felt"
             }
         ],
