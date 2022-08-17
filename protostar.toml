@@ -6,5 +6,9 @@ libs_path = "lib"
 
 ["protostar.contracts"]
 main = [
-    "src/hyperion.cairo",
+    "src/hyperion.cairo", 
+]
+
+factory = [
+   "src/factory.cairo",
 ]

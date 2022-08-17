@@ -10,6 +10,7 @@
 from starkware.cairo.common.cairo_builtins import HashBuiltin
 from starkware.cairo.common.math import assert_not_zero, assert_lt
 from starkware.cairo.common.alloc import alloc
+from starkware.starknet.common.syscalls import deploy
 
 ### ======= storage variables ========
 
@@ -32,11 +33,11 @@ func constructor{
         syscall_ptr : felt*,
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
-}(hyperion_class_hash : felt):
+}(class_hash : felt):
 
 # prevents first salt from 
     salt.write(1)
-    hyperion_class_hash.write(hyperion_class_hash) 
+    hyperion_class_hash.write(class_hash) 
 
     return()
 end
@@ -49,8 +50,9 @@ func create_pool{
         pedersen_ptr : HashBuiltin*,
         range_check_ptr,
 }(tokens_len : felt, tokens : felt*) -> (pool_address : felt):
+    alloc_locals
 
-    let (class_hash) = hyperion_class_hash.read()
+    let (local hash) = hyperion_class_hash.read()
     
     let (current_salt) = salt.read()
     salt.write(current_salt + 1)
@@ -59,30 +61,33 @@ func create_pool{
     not_zero_address(tokens_len, tokens)
 
     let (pool_address) = deploy(
-        class_hash=class_hash,
+        class_hash=hash,
         contract_address_salt=current_salt,
-        constructor_calldata_size=tokens_len,
+        constructor_calldata_size=tokens_len - 1,
         constructor_calldata=tokens,
     )
     
-    return()
+    return(pool_address)
 end
 
 ### ============= utils ==============
 
+@external
 func not_zero_address{
         syscall_ptr : felt*,
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
-}(arr_lens : felt, arr : felt*) -> (res : felt):
-    if arr_lens == 0:
+}(arr_len : felt, arr : felt*) -> (res : felt):
+    alloc_locals
+
+    if arr_len == 0:
         return(0)
     end
 
-    let (local address) = arr[arr_lens]
+    let address = arr[arr_len - 1]
     assert_not_zero(address)    
     
-    let (res) = not_zero_address(arr_lens - 1, arr)
+    let (res) = not_zero_address(arr_len - 1, arr)
     return(res)
 end
 
