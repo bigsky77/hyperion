@@ -75,22 +75,7 @@ func get_pool_balance{
     return(balance)
 end
 
-
-### ============= utils ==============
-
-func set_token_index{
-        syscall_ptr : felt*,
-        pedersen_ptr : HashBuiltin*,
-        range_check_ptr,
-}(arr_len : felt, arr : felt*) ->(res : felt):
-    if arr_len == 0:
-        return(0)
-    end
-
-    tokens.write(token_index=arr_len, value=arr[arr_len -1])
-    let (res) = set_token_index(arr_len - 1, arr)
-    return(res)
-end
+### =============== _A ===============
 
 # this will eventually be rolled into the constructor - but keeping seperate for now
 func set_A{
@@ -111,6 +96,145 @@ func set_A{
     
     return()
 end
+
+func ramp_A{
+        syscall_ptr : felt*,
+        pedersen_ptr : HashBuiltin*,
+        range_check_ptr
+}() -> (res : felt):
+    alloc_locals
+    
+    let (A) = _A_.read()
+
+    let t1 = A.future_a_time
+    let A1 = A.future_a
+    let (block_time_stamp) = get_block_timestamp()
+     
+    # block_time_stamp < t1
+    let (x) = is_le(block_time_stamp, t1 - 1)
+
+    # if block_time_stamp > t1
+    if x == 0: 
+        return(res=A1)
+    end
+
+    let A0 = A.initial_a
+    let t0 = A.initial_a_time
+
+    # A1 > A0
+    let (y) = is_le(A0, A1 - 1)
+    
+    # if A1 < A0 
+    if y == 0:
+        let res = A0 - (A0 - A1) * (block_time_stamp * t0) / (t1 - t0) 
+        return(res)
+    end
+
+    # if A1 > A0
+    let res = A0 + (A1 - A0) * (block_time_stamp * t0) / (t1 - t0)
+
+    return(res)
+end
+
+### =============== _D ===============
+
+@external
+func _get_D{
+        syscall_ptr : felt*,
+        pedersen_ptr : HashBuiltin*,
+        range_check_ptr,
+}() -> (res : felt):
+    alloc_locals
+
+    # setting in the function instead of passing as variable 
+    let (xp) = _xp()
+    let (amp) = ramp_A()
+    
+    
+    let Dprev = Uint256(0, 0)
+
+    let (n) = n_tokens.read()
+    # array sum of balances
+    let (S) = arr_sum(n, xp)
+    
+    if S == 0:
+        return(0)
+    end
+    
+    return(0)
+end
+
+
+### =============== xp ===============
+
+# notice: returns an array of token balances 
+func _xp{
+        syscall_ptr : felt*,
+        pedersen_ptr : HashBuiltin*,
+        range_check_ptr
+}() -> (res : felt*):
+    alloc_locals
+    
+    local arr : Uint256*
+
+    let (n) = n_tokens.read()
+    let res : felt* = get_xp(n, arr)
+
+    return(res)
+end
+
+func get_xp{
+        syscall_ptr : felt*,
+        pedersen_ptr : HashBuiltin*,
+        range_check_ptr
+}(n : felt, arr : Uint256*) -> (res : felt*):
+    alloc_locals
+    
+    if n == 0:
+        return(arr)
+    end
+
+    let (address) = get_contract_address()
+    let (token_) = tokens.read(n)
+    let (bal) = IERC20.balanceOf(token_, address)
+     
+    assert [arr + n] = bal
+
+    let (res) = get_xp(n - 1, arr + 1)
+    return(res)
+end
+
+### ============= utils ==============
+
+func set_token_index{
+        syscall_ptr : felt*,
+        pedersen_ptr : HashBuiltin*,
+        range_check_ptr,
+}(arr_len : felt, arr : felt*) ->(res : felt):
+    if arr_len == 0:
+        return(0)
+    end
+
+    tokens.write(token_index=arr_len, value=arr[arr_len -1])
+    let (res) = set_token_index(arr_len - 1, arr)
+    return(res)
+end
+
+func arr_sum{
+        syscall_ptr : felt*,
+        pedersen_ptr : HashBuiltin*,
+        range_check_ptr,
+}(arr_len : felt, arr : felt*) -> (arr_sum : felt):
+    alloc_locals
+
+    if arr_len == 0:
+        return(0)
+    end
+
+    let (sum_of_rest) = arr_sum(arr_len - 1, arr + 1)
+    return(arr_sum=[arr] + sum_of_rest)
+end
+
 
 
 
