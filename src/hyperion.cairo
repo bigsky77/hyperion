@@ -97,7 +97,7 @@ func set_A{
     return()
 end
 
-func ramp_A{
+func get_A{
         syscall_ptr : felt*,
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
@@ -148,8 +148,7 @@ func _get_D{
 
     # setting in the function instead of passing as variable 
     let (xp) = _xp()
-    let (amp) = ramp_A()
-    
+    let (amp) = get_A()
     
     let Dprev = Uint256(0, 0)
 
@@ -160,10 +159,40 @@ func _get_D{
     if S == 0:
         return(0)
     end
+
+    let val = 255
+    calc_D(val, S, S, amp)
     
     return(0)
 end
 
+func calc_D(val : felt, S : felt, D : felt, amp : felt) -> (res : felt):
+    alloc_locals
+
+    if val == 0:
+        return(0)
+    end
+
+    let (dp) = D
+    calc_DP(dp, S)
+
+end
+
+func calc_DP(n, dp, D) -> (dp : felt):
+    alloc_locals
+    
+    if n == 0:
+        return(0)
+    end
+    
+    let num_tokens = n_tokens.read()
+    let val_x = IERC20.balanceOf(n)
+
+    let x = dp * D / (n * n_tokens)
+    let (dp) = calc_DP(n - 1,  , D)
+
+    return(dp)
+end
 
 ### =============== xp ===============
 
