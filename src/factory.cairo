@@ -35,7 +35,7 @@ func constructor{
         range_check_ptr
 }(class_hash : felt):
 
-# prevents first salt from 
+# prevents first salt from being 0 
     salt.write(1)
     hyperion_class_hash.write(class_hash) 
 
@@ -72,6 +72,9 @@ func create_pool{
         constructor_calldata_size=3,
         constructor_calldata=calldata
     )
+    
+    # pool index trails salt by 1
+    pool.write(current_salt, pool_address)
     
     return(pool_address)
 end
