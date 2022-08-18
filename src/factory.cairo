@@ -44,6 +44,7 @@ end
 
 ### ====== external functions ========
 
+# this is a hack - only creates a two token pool initially
 @external
 func create_pool{
         syscall_ptr : felt*,
@@ -53,18 +54,23 @@ func create_pool{
     alloc_locals
 
     let (local hash) = hyperion_class_hash.read()
-    
+
     let (current_salt) = salt.read()
     salt.write(current_salt + 1)
-
-   # ensure no zero addresses 
+       
+    # ensure no zero addresses 
     not_zero_address(tokens_len, tokens)
-
+    
+    let (calldata) = alloc()
+    assert [calldata] = tokens_len
+    assert [calldata + 1] = tokens[0]
+    assert [calldata + 2] = tokens[1]
+    
     let (pool_address) = deploy(
         class_hash=hash,
         contract_address_salt=current_salt,
-        constructor_calldata_size=tokens_len - 1,
-        constructor_calldata=tokens,
+        constructor_calldata_size=3,
+        constructor_calldata=calldata
     )
     
     return(pool_address)
@@ -90,6 +96,10 @@ func not_zero_address{
     let (res) = not_zero_address(arr_len - 1, arr)
     return(res)
 end
+
+
+
+
 
 
 

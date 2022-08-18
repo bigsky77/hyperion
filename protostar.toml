@@ -12,3 +12,7 @@ main = [
 factory = [
    "src/factory.cairo",
 ]
+
+["protostar.test"]
+target = ["tests"]
+

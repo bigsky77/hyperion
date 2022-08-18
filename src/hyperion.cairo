@@ -25,7 +25,7 @@ from src.openzeppelin.token.erc20.IERC20 import IERC20
 ### ======= storage variables ========
 
 @storage_var
-func n_tokens() -> (number_of_tokens : felt):
+func n_tokens() -> (value : felt):
 end
 
 ### ========== constructor ===========
@@ -36,7 +36,9 @@ func constructor{
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
 }(tokens_len : felt, tokens : felt*):
+    alloc_locals
 
+    n_tokens.write(value=tokens_len)
 
     return()
 end
