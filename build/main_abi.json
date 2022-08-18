@@ -49,6 +49,29 @@
         "type": "function"
     },
     {
+        "inputs": [
+            {
+                "name": "initial_a",
+                "type": "felt"
+            },
+            {
+                "name": "future_a",
+                "type": "felt"
+            },
+            {
+                "name": "initial_a_time",
+                "type": "felt"
+            },
+            {
+                "name": "future_a_time",
+                "type": "felt"
+            }
+        ],
+        "name": "set_A",
+        "outputs": [],
+        "type": "function"
+    },
+    {
         "inputs": [],
         "name": "_get_D",
         "outputs": [
@@ -57,6 +80,22 @@
                 "type": "felt"
             }
         ],
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "_xp",
+        "outputs": [
+            {
+                "name": "res_len",
+                "type": "felt"
+            },
+            {
+                "name": "res",
+                "type": "felt*"
+            }
+        ],
+        "stateMutability": "view",
         "type": "function"
     }
 ]

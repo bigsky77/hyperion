@@ -78,6 +78,7 @@ end
 ### =============== _A ===============
 
 # this will eventually be rolled into the constructor - but keeping seperate for now
+@external
 func set_A{
         syscall_ptr : felt*,
         pedersen_ptr : HashBuiltin*,
@@ -147,7 +148,7 @@ func _get_D{
     alloc_locals
 
     # setting in the function instead of passing as variable 
-    let (xp) = _xp()
+    let (xp_len, xp) = _xp()
     let (amp) = get_A()
     
     let Dprev = Uint256(0, 0)
@@ -159,49 +160,91 @@ func _get_D{
     if S == 0:
         return(0)
     end
-
-    let val = 255
-    calc_D(val, S, S, amp)
     
-    return(0)
+    let loop_len = 255
+    let Ann = amp * n
+    let D_start = S
+    
+    let (res) = calc_D(loop_len, Ann, D_start, xp_len, xp, S)
+
+    return(res)
 end
 
-func calc_D(val : felt, S : felt, D : felt, amp : felt) -> (res : felt):
+func calc_D{
+        syscall_ptr : felt*,
+        pedersen_ptr : HashBuiltin*,
+        range_check_ptr,
+}(n : felt, Ann : felt, D : felt, xp_len : felt, _xp : felt*, S : felt) -> (D : felt):
     alloc_locals
 
-    if val == 0:
-        return(0)
-    end
-
-    let (dp) = D
-    calc_DP(dp, S)
-
-end
-
-func calc_DP(n, dp, D) -> (dp : felt):
-    alloc_locals
-    
+    # n should never = 0
     if n == 0:
         return(0)
     end
+
+    let (A) = get_A()
+    let (n_coins) = n_tokens.read()
+
+    let (D_P) = ramp_DP(xp_len, _xp, D, D)
+    let D_prev = D
     
-    let num_tokens = n_tokens.read()
-    let val_x = IERC20.balanceOf(n)
+    let D_new = (Ann * S  / A * D_P * n_coins ) * D / ((Ann * A) * D / A + (n_coins + 1) * D_P) 
+    
+    # if D_new > D_prev
+    let (x) = is_le(D_prev, D_new - 1)
+        if x == 0:
+            let (D) = calc_D(n - 1, Ann, D_new, xp_len, _xp, S)
+            return(D)
+        end
+    
+    # is D_new - D_prev <= 1
+    let (y) = is_le(D_new - D_prev, 1)
+         if y == 0:
+            let (D) = calc_D(n - 1, Ann, D_new, xp_len, _xp, S)
+            return(D)
+        end
+    # is D_prev - D_new <= 1     
+    let (z) = is_le(D_prev - D_new, 1)
+        if z == 0:
+            let (D) = calc_D(n - 1, Ann, D_new, xp_len, _xp, S)
+            return(D)
+        end
 
-    let x = dp * D / (n * n_tokens)
-    let (dp) = calc_DP(n - 1,  , D)
+    return(D)
+end
 
-    return(dp)
+func ramp_DP{
+        syscall_ptr : felt*,
+        pedersen_ptr : HashBuiltin*,
+        range_check_ptr
+}(xp_len : felt, _xp : felt*, D_P : felt, D : felt) -> (DP : felt):
+    alloc_locals
+
+    let (n) = n_tokens.read()
+
+    if xp_len == 0:
+        return(0)
+    end
+
+    if D_P == 0:
+        let res = (D * D) / (_xp[n - 1] * n)
+        ramp_DP(xp_len - 1, _xp, res, D)
+    end
+
+    let x = D_P * D / (_xp[n - 1] * n)
+    let (res) = ramp_DP( xp_len - 1, _xp, x, D)
+    return(res)
 end
 
 ### =============== xp ===============
 
 # notice: returns an array of token balances 
+@view
 func _xp{
         syscall_ptr : felt*,
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
-}() -> (res : felt*):
+}() -> (res_len : felt, res : felt*):
     alloc_locals
     
     local arr : Uint256*
@@ -209,7 +252,7 @@ func _xp{
     let (n) = n_tokens.read()
     let res : felt* = get_xp(n, arr)
 
-    return(res)
+    return(n, res)
 end
 
 func get_xp{
