@@ -5,6 +5,14 @@
 %lang starknet
 %builtins pedersen range_check 
 
+### ============ glossary ============
+
+# xp - array of token balances  
+# j - index of coin to receive
+# i - index coin to send
+# dx - amount of 'i' being exchanged
+# dy - amount of 'j' to receive
+
 ### ========== dependencies ==========
 
 # starkware cairo-std
@@ -314,6 +322,7 @@ func get_y{
 }(i : felt, j : felt, x : felt, _xp : felt*) -> (res : felt):
     # i index value of coin to send 
     # j index value of the coin to receive
+    # x = _dx + xp[i] 
 
     alloc_locals 
     
@@ -328,16 +337,59 @@ func get_y{
     assert_lt(i, n_coins)
 
     let (A) = get_A()
-    let D = get_D()
+    let (D) = get_D()
     let Ann = A * n_coins
    
-    # placeholder
-    let (res) = set_i_x(n_coins, i, j, x, _xp)
+    let (S) = find_S(n_coins, i, j, x, _xp)
+    
+    # writing algorythm for 2 coins for now - this simplifies the loop a bit
+    let _c = D * D / (x * n_coins)
+    # this should be A_PRECISION using A to simpify for now 
+    let c = _c * D * A / (Ann * n_coins)
+    let b = S + D * A / Ann
+    let y = D
+    let n = 255
+    
+    let (res) = y_loop(n, y, c, b, D)
 
     return(res)
 end
 
-func set_i_x{
+func y_loop{
+        syscall_ptr : felt*,
+        pedersen_ptr : HashBuiltin*,
+        range_check_ptr,
+}(n : felt, y : felt, c : felt, b : felt, D : felt) -> (res : felt):
+    alloc_locals
+    
+    if n == 0:
+        return(0)
+    end
+
+    let y_prev = y
+    let _y = (y * y + c) / (2 * y + b - D)
+    
+    # y_prev < y 
+    let (e) = is_le(y_prev, _y - 1)
+    
+    if e != 0:
+        let (v) = is_le(_y - y_prev, 1)
+        if v != 0:
+            return(_y)
+        end
+    end
+
+    let (z) = is_le(y_prev - _y, 1)
+        if z != 0:
+            return(_y)
+    end 
+
+    let (res) = y_loop(n - 1, y_prev, c, b, D)
+    return(res)
+end
+
+# do not need to use this function if n_coins < 3
+func find_S{
         syscall_ptr : felt*,
         pedersen_ptr : HashBuiltin*,
         range_check_ptr,
@@ -349,20 +401,25 @@ func set_i_x{
     _xp : felt*) -> (res : felt): 
     alloc_locals
 
-    if i == 0:
+    # not the most elegant solution and may not work, but captures the logic
+    if n == 0:
         return(0)
     end
 
+    if i == j:
+        return(0)
+    end 
+   
     if i == n:
-        return(res=x)
+       return(x)
     end
-
+    
     if i != j:
-        return(res=_xp[i])
+        return(_xp[i])
     end
 
-    let (x) = set_i_x(n, i - 1, j, x, _xp)
-    return(res=x)
+    let (res) = find_S(n - 1, i, j, x, _xp)
+    return(res=[_xp] + res)
 end
 
 ### ============= utils ==============
