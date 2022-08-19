@@ -17,6 +17,36 @@
         "type": "struct"
     },
     {
+        "data": [],
+        "keys": [],
+        "name": "Swap",
+        "type": "event"
+    },
+    {
+        "data": [],
+        "keys": [],
+        "name": "Mint",
+        "type": "event"
+    },
+    {
+        "data": [],
+        "keys": [],
+        "name": "Burn",
+        "type": "event"
+    },
+    {
+        "data": [],
+        "keys": [],
+        "name": "Ramp",
+        "type": "event"
+    },
+    {
+        "data": [],
+        "keys": [],
+        "name": "Stop_Ramp",
+        "type": "event"
+    },
+    {
         "inputs": [
             {
                 "name": "tokens_len",
@@ -73,7 +103,7 @@
     },
     {
         "inputs": [],
-        "name": "_get_D",
+        "name": "get_D",
         "outputs": [
             {
                 "name": "res",

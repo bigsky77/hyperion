@@ -10,7 +10,7 @@
 # starkware cairo-std
 from starkware.cairo.common.cairo_builtins import HashBuiltin
 from starkware.cairo.common.alloc import alloc
-from starkware.cairo.common.math import assert_not_zero, assert_lt
+from starkware.cairo.common.math import assert_not_zero, assert_lt, assert_not_equal, assert_nn
 from starkware.cairo.common.math_cmp import is_le 
 from starkware.cairo.common.uint256 import Uint256
 from starkware.starknet.common.syscalls import (get_caller_address, get_contract_address)
@@ -40,6 +40,28 @@ end
 
 @storage_var
 func _A_() -> (_A : _A):
+end
+
+### ============= events =============
+
+@event
+func Swap():
+end
+
+@event 
+func Mint():
+end
+
+@event
+func Burn():
+end
+
+@event
+func Ramp():
+end
+
+@event 
+func Stop_Ramp():
 end
 
 ### ========== constructor ===========
@@ -140,7 +162,7 @@ end
 ### =============== _D ===============
 
 @external
-func _get_D{
+func get_D{
         syscall_ptr : felt*,
         pedersen_ptr : HashBuiltin*,
         range_check_ptr,
@@ -170,6 +192,7 @@ func _get_D{
     return(res)
 end
 
+# notice: These three functions can probably be put into one 
 func calc_D{
         syscall_ptr : felt*,
         pedersen_ptr : HashBuiltin*,
@@ -274,6 +297,72 @@ func get_xp{
 
     let (res) = get_xp(n - 1, arr + 1)
     return(res)
+end
+
+### ============== swap ==============
+
+### ============== mint ==============
+
+### ============== burn ==============
+
+### =============== _y ===============
+
+func get_y{
+        syscall_ptr : felt*,
+        pedersen_ptr : HashBuiltin*,
+        range_check_ptr,
+}(i : felt, j : felt, x : felt, _xp : felt*) -> (res : felt):
+    # i index value of coin to send 
+    # j index value of the coin to receive
+
+    alloc_locals 
+    
+    let (n_coins) = n_tokens.read()
+
+    assert_not_equal(i, j)
+    assert_nn(j)
+    assert_lt(j, n_coins)
+
+    # safety checks
+    assert_nn(i)
+    assert_lt(i, n_coins)
+
+    let (A) = get_A()
+    let D = get_D()
+    let Ann = A * n_coins
+   
+    # placeholder
+    let (res) = set_i_x(n_coins, i, j, x, _xp)
+
+    return(res)
+end
+
+func set_i_x{
+        syscall_ptr : felt*,
+        pedersen_ptr : HashBuiltin*,
+        range_check_ptr,
+}(
+    n : felt, 
+    i : felt, 
+    j : felt, 
+    x : felt, 
+    _xp : felt*) -> (res : felt): 
+    alloc_locals
+
+    if i == 0:
+        return(0)
+    end
+
+    if i == n:
+        return(res=x)
+    end
+
+    if i != j:
+        return(res=_xp[i])
+    end
+
+    let (x) = set_i_x(n, i - 1, j, x, _xp)
+    return(res=x)
 end
 
 ### ============= utils ==============
