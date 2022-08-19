@@ -18,7 +18,7 @@
 # starkware cairo-std
 from starkware.cairo.common.cairo_builtins import HashBuiltin
 from starkware.cairo.common.alloc import alloc
-from starkware.cairo.common.math import assert_not_zero, assert_lt, assert_not_equal, assert_nn
+from starkware.cairo.common.math import assert_not_zero, assert_lt, assert_not_equal, assert_nn, assert_le
 from starkware.cairo.common.math_cmp import is_le 
 from starkware.cairo.common.uint256 import Uint256
 from starkware.starknet.common.syscalls import (get_caller_address, get_contract_address)
@@ -309,11 +309,52 @@ end
 
 ### ============== swap ==============
 
+# this function should be called from router contract
+@external
+func swap{
+        syscall_ptr : felt*,
+        pedersen_ptr : HashBuiltin*,
+        range_check_ptr
+}(i : felt, j : felt, _dx : felt, _min_dy : felt) -> (res : felt):
+    alloc_locals 
+
+    let (old_balances) = _xp()
+    let (x) = old_balances[i] + _dx
+    let (y) = get_y(i, j, x, old_balances)
+
+    let (dy) = old_balances[j] - y - 1
+
+     # todo impliment fees
+
+    assert_le(_min_dy, dy)
+
+    # transfer from  
+
+    return(res=dy)
+end
+
+
 ### ============== mint ==============
 
 ### ============== burn ==============
 
 ### =============== _y ===============
+
+func get_dy{
+        syscall_ptr : felt*,
+        pedersen_ptr : HashBuiltin*,
+        range_check_ptr,
+}(i : felt, j : felt, _dx : felt) -> (res : felt):
+    alloc_locals
+
+    let (_, xp) = _xp()
+    let x = xp[i] + _dx
+    let (y) = get_y(i, j, x, xp)
+    let dy = xp[j] - y - 1
+
+    # todo: add fee 
+    return(dy)
+end
 
 func get_y{
         syscall_ptr : felt*,
