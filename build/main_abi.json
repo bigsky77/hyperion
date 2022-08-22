@@ -1,131 +1,17 @@
 [
     {
-        "members": [
-            {
-                "name": "low",
-                "offset": 0,
-                "type": "felt"
-            },
-            {
-                "name": "high",
-                "offset": 1,
-                "type": "felt"
-            }
-        ],
-        "name": "Uint256",
-        "size": 2,
-        "type": "struct"
-    },
-    {
-        "data": [],
-        "keys": [],
-        "name": "Swap",
-        "type": "event"
-    },
-    {
-        "data": [],
-        "keys": [],
-        "name": "Mint",
-        "type": "event"
-    },
-    {
-        "data": [],
-        "keys": [],
-        "name": "Burn",
-        "type": "event"
-    },
-    {
-        "data": [],
-        "keys": [],
-        "name": "Ramp",
-        "type": "event"
-    },
-    {
-        "data": [],
-        "keys": [],
-        "name": "Stop_Ramp",
-        "type": "event"
-    },
-    {
         "inputs": [
             {
-                "name": "tokens_len",
+                "name": "arr_len",
                 "type": "felt"
             },
             {
-                "name": "tokens",
+                "name": "arr",
                 "type": "felt*"
             }
         ],
         "name": "constructor",
         "outputs": [],
         "type": "constructor"
-    },
-    {
-        "inputs": [
-            {
-                "name": "index",
-                "type": "felt"
-            }
-        ],
-        "name": "get_pool_balance",
-        "outputs": [
-            {
-                "name": "balance",
-                "type": "Uint256"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "name": "initial_a",
-                "type": "felt"
-            },
-            {
-                "name": "future_a",
-                "type": "felt"
-            },
-            {
-                "name": "initial_a_time",
-                "type": "felt"
-            },
-            {
-                "name": "future_a_time",
-                "type": "felt"
-            }
-        ],
-        "name": "set_A",
-        "outputs": [],
-        "type": "function"
-    },
-    {
-        "inputs": [],
-        "name": "get_D",
-        "outputs": [
-            {
-                "name": "res",
-                "type": "felt"
-            }
-        ],
-        "type": "function"
-    },
-    {
-        "inputs": [],
-        "name": "_xp",
-        "outputs": [
-            {
-                "name": "res_len",
-                "type": "felt"
-            },
-            {
-                "name": "res",
-                "type": "felt*"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
     }
 ]
