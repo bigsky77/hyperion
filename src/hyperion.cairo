@@ -8,6 +8,8 @@
 
 from starkware.cairo.common.cairo_builtins import HashBuiltin
 from starkware.cairo.common.alloc import alloc
+from starkware.cairo.common.math_cmp import is_le
+from starkware.cairo.common.registers import get_fp_and_pc
 
 from starkware.starknet.common.syscalls import get_block_timestamp
 
@@ -44,7 +46,7 @@ func constructor{
         range_check_ptr
 }(arr_len : felt, arr : felt*, A : felt):
     
-    n_tokens.write(arr_len - 1)
+    n_tokens.write(arr_len)
     set_tokens(arr_len, arr)
     
     let (time) = get_block_timestamp()
@@ -89,11 +91,12 @@ func exchange{
     alloc_locals
 
     let (arr) = alloc()
+    assert [arr] = 0
     let (n) = n_tokens.read()
     let (old_balances) = _xp(n, arr) 
-
+   
     let x = old_balances[i] + _dx
-    let y = get_y(i, j, x, old_balances) 
+    let (y) = get_y(i, j, x, n, old_balances) 
     
     return(x)
 end
@@ -104,11 +107,12 @@ func get_y{
         syscall_ptr : felt*,
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
-}(i : felt, j : felt, _dx : felt, _xp : felt*) -> (y : felt):
+}(i : felt, j : felt, _dx : felt, n : felt, _xp : felt*) -> (y : felt):
     alloc_locals
 
+    let (n) =n_tokens.read()
     let (A) = get_A()
-    let (D) = get_D(A , _xp)
+    let (D) = get_D(A , n, _xp)
 
 
     return(y=0)
@@ -120,9 +124,51 @@ func get_D{
         syscall_ptr : felt*,
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
-}(A : felt, _xp : felt*) -> (D : felt):
+}(A : felt, n : felt, _xp : felt*) -> (D : felt):
+    alloc_locals 
 
-    return(D=0)
+    let (S) =  array_sum(n, _xp)
+
+    if S == 0:
+        return(0)
+    end
+
+    let D = S
+    let Ann = A * n
+    let count = 255
+
+    let (D) = d_recursion(count, D, Ann, n, _xp)
+
+    return(D)
+end
+
+func d_recursion{
+        syscall_ptr : felt*,
+        pedersen_ptr : HashBuiltin*,
+        range_check_ptr
+}(count : felt, D : felt, Ann : felt, n : felt, _xp : felt*) -> (res : felt):
+    alloc_locals
+
+    let (D_P) = D_P_recursion(D, D, n, _xp, n)
+    return(res=0)
+end
+
+func D_P_recursion{
+        syscall_ptr : felt*,
+        pedersen_ptr : HashBuiltin*,
+        range_check_ptr
+}(D_P : felt, D : felt, xp_len : felt, _xp : felt*, n : felt) -> (D_P_ : felt):
+    alloc_locals
+
+    if xp_len == 0:
+        return(0)
+    end
+
+    
+    # HACK not sure why n works buy xp_len does not 
+    let res = D_P * D / (_xp[n - 1] * n)
+    let (D_P_) = D_P_recursion(res, D, xp_len - 1, _xp, n)
+    return(D_P_)
 end
 
 ### ==============  A  ===============
@@ -132,9 +178,33 @@ func get_A{
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
 }() -> (A : felt):
+    alloc_locals
 
+    let (_a) = _A_.read()
+    
+    let t1 = _a.future_a_time
+    let A1 = _a.future_a
 
-    return(A=0)
+    let (block_time_stamp) = get_block_timestamp()
+
+        # if blocktime < t1
+        let (x) = is_le(block_time_stamp, t1 - 1)
+        if x != 0: 
+            let A0 = _a.initial_a
+            let t0 = _a.initial_a_time
+        
+            # assert A1 > A0
+            let (y) = is_le(A0, A1 - 1)
+            if y != 0:
+                let A = A0 + (A1 - A0) * (block_time_stamp - t0) / (t1 - t0)
+                return(A)
+            else:
+                let A = A0 - (A0 - A1) * (block_time_stamp - t0) / (t1 - t0)
+                return(A)
+            end 
+        end
+
+    return(A1)
 end
 
 ### ============= utils ==============
@@ -172,6 +242,18 @@ func _xp{
     return(res)
 end
 
+func array_sum{
+        syscall_ptr : felt*,
+        pedersen_ptr : HashBuiltin*,
+        range_check_ptr
+}(arr_len : felt, arr : felt*) -> (sum : felt): 
+    if arr_len == 0: 
+        return(0)
+    end
+
+    let (sum_of_rest) = array_sum(arr_len - 1, arr + 1)
+    return(sum=[arr] + sum_of_rest)
+end
 
 # until we build out the pool this will set the initial state for testing
 func init_pool{
