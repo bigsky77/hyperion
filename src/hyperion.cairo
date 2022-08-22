@@ -137,7 +137,7 @@ func get_D{
     let Ann = A * n
     let count = 255
 
-    let (D) = d_recursion(count, D, Ann, n, _xp)
+    let (D) = d_recursion(count, S, D, Ann, n, _xp)
 
     return(D)
 end
@@ -146,11 +146,34 @@ func d_recursion{
         syscall_ptr : felt*,
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
-}(count : felt, D : felt, Ann : felt, n : felt, _xp : felt*) -> (res : felt):
+}(count : felt, S : felt, D : felt, Ann : felt, n : felt, _xp : felt*) -> (res : felt):
     alloc_locals
 
+    # should never reach 0 
+    if count == 0:
+        return(0)
+    end
+
+    let (A) = get_A()
     let (D_P) = D_P_recursion(D, D, n, _xp, n)
-    return(res=0)
+    let D_new = (Ann * S / A + D_P * n) * D / ((Ann - A) * D / A + (n + 1) * D_P)
+
+    # D_new > D
+    let (y) = is_le(D, D_new - 1)
+        if y != 0:
+            let (z) = is_le(D_new - D, 1)
+                if z != 0:
+                    return(D_new)
+                end
+        end
+
+    let (x) = is_le(D - D_new, 1)
+        if x != 0:
+            return(D_new)
+        end
+
+    let (res) = d_recursion(count - 1, S, D_new, Ann, n, _xp)
+    return(res)
 end
 
 func D_P_recursion{
