@@ -48,7 +48,10 @@ func constructor{
     
     n_tokens.write(arr_len)
     set_tokens(arr_len, arr)
-    
+
+    # placeholder for testing purposes only 
+    init_pool(arr_len)
+
     let (time) = get_block_timestamp()
     let a = _A(
         precision=PRECISION,
@@ -60,7 +63,6 @@ func constructor{
 
     _A_.write(a)
 
-    init_pool(arr_len - 1)
     return()
 end
 
@@ -87,18 +89,19 @@ func exchange{
         syscall_ptr : felt*,
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
-}(i : felt, j : felt, _dx : felt) -> (res : felt):
+}(i : felt, j : felt, _dx : felt) -> (res : felt, a : felt, b : felt):
     alloc_locals
 
     let (arr) = alloc()
-    assert [arr] = 0
     let (arr_len) = n_tokens.read()
     let (old_balances) = _xp(arr_len, arr) 
-   
+    
+    let a = old_balances[i]
+    let b = old_balances[j]
     let x = old_balances[i] + _dx
     #let (y) = get_y(i, j, x, arr_len, old_balances) 
     
-    return(old_balances[2])
+    return(x, a, b)
 end
 
 ### =============== _y ===============
@@ -171,7 +174,6 @@ func find_C{
     let (res) = find_C(xp_len - 1, _xp, y, D, n)
     return(res)
 end
-
 
 ### =============== _D ===============
 
@@ -314,10 +316,10 @@ func _xp{
         return(arr)
     end
 
-    let (x) = token_balance.read(n - 1)
-    assert [arr] = x 
-    
-    _xp(n - 1, arr + 1)
+    let (x) = token_balance.read(n)
+    assert arr[n] = x 
+
+    _xp(n - 1, arr)
 
     # should never reach here
     return(arr)

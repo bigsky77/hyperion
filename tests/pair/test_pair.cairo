@@ -78,7 +78,7 @@ func test_get_token{
 end
 
 @external
-func test_exchange{
+func test_xp{
         syscall_ptr : felt*,
         #pedersen_ptr : HashBuiltin*,
         range_check_ptr,
@@ -89,8 +89,10 @@ func test_exchange{
     let (token_a) = token_a_instance.deployed()
     let (token_b) = token_b_instance.deployed()
     
-    let (res) = IHyperion.exchange(hyperion, 1, 2, 100)
-    assert res = 3
+    let (res, a, b) = IHyperion.exchange(hyperion, 1, 2, 100)
+    assert res = 1100
+    assert a = 1000
+    assert b = 1000
     return()
 end
 
