@@ -89,19 +89,21 @@ func exchange{
         syscall_ptr : felt*,
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
-}(i : felt, j : felt, _dx : felt) -> (res : felt, a : felt, b : felt):
+}(i : felt, j : felt, _dx : felt) -> (res : felt, a : felt, z : felt):
     alloc_locals
 
     let (arr) = alloc()
+    # need to set first value of array to zero for arr_sum to work
+    assert [arr + 0] = 0
     let (arr_len) = n_tokens.read()
     let (old_balances) = _xp(arr_len, arr) 
-    
+  
     let a = old_balances[i]
-    let b = old_balances[j]
+    let z = old_balances[j]
     let x = old_balances[i] + _dx
-    #let (y) = get_y(i, j, x, arr_len, old_balances) 
+    let (y) = get_y(i, j, x, arr_len, old_balances) 
     
-    return(x, a, b)
+    return(x, a, z)
 end
 
 ### =============== _y ===============
@@ -121,9 +123,49 @@ func get_y{
     let counter = 0
     let _c = 0
     let (S) = find_S(counter, i, j, _dx, xp_len, _xp)
-    let (C) = find_C(xp_len, _xp, counter, D, n)
+    let (_c_) = find_C(xp_len, _xp, counter, D, n)
 
-    return(y=0)
+    let c = _c_ * D * A / (Ann * n)
+    let b = S * D * A / Ann
+ 
+    let count = 255
+    let _y = D
+
+    let (y) = y_recursion(count, D, c, b, _y)
+ 
+    return(y)
+end
+
+func y_recursion{
+        syscall_ptr : felt*,
+        pedersen_ptr : HashBuiltin*,
+        range_check_ptr
+}(count : felt, D : felt, c : felt, b : felt, y : felt) -> (res : felt):
+
+    # should never reach zero
+    if count == 0:
+        return(0)
+    end
+
+    let y_prev = y
+    let y_new = (y*y + c)/ (2 * y + b - D)
+ 
+    # y_new > y_prev
+    let (x) = is_le(y_prev, y_new - 1) 
+        if x != 0:
+            let (z) = is_le(y_new - y_prev, 1)
+                if z != 0: 
+                    return(y_new)
+                end
+            else: 
+                let (a) = is_le(y_prev - y_new, 1)
+                if a != 0:
+                    return(y_new)
+                end
+        end
+
+    let (res) = y_recursion(count - 1, D, c, b, y_new)
+    return(res)
 end
 
 func find_S{
