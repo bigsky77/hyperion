@@ -89,10 +89,10 @@ func test_xp{
     let (token_a) = token_a_instance.deployed()
     let (token_b) = token_b_instance.deployed()
     
-    let (res, a, b) = IHyperion.exchange(hyperion, 1, 2, 100)
-    assert res = 1100
-    assert a = 1000
-    assert b = 1000
+    let (pool_balance, i_balance, j_balance) = IHyperion.exchange(hyperion, 1, 2, 100)
+    assert pool_balance = 1 
+    assert i_balance = 1000
+    assert j_balance = 1000
     return()
 end
 

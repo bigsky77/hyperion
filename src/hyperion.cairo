@@ -89,7 +89,7 @@ func exchange{
         syscall_ptr : felt*,
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
-}(i : felt, j : felt, _dx : felt) -> (res : felt, a : felt, z : felt):
+}(i : felt, j : felt, _dx : felt) -> (pool_balance : felt, i_balance : felt, j_balance : felt):
     alloc_locals
 
     let (arr) = alloc()
@@ -98,12 +98,20 @@ func exchange{
     let (arr_len) = n_tokens.read()
     let (old_balances) = _xp(arr_len, arr) 
   
-    let a = old_balances[i]
-    let z = old_balances[j]
     let x = old_balances[i] + _dx
     let (y) = get_y(i, j, x, arr_len, old_balances) 
     
-    return(x, a, z)
+    let dy = old_balances[j] - y - 1 
+
+    # change balances 
+    token_balance.write(i, x)
+    token_balance.write(j, old_balances[j] - dy)
+    
+    let (i_balance) = token_balance.read(i)
+    let (j_balance) = token_balance.read(j)
+    let pool_balance = i_balance + j_balance 
+
+    return(y, i_balance, j_balance)
 end
 
 ### =============== _y ===============
@@ -115,24 +123,24 @@ func get_y{
 }(i : felt, j : felt, _dx : felt, xp_len : felt, _xp : felt*) -> (y : felt):
     alloc_locals
 
-    let (n) =n_tokens.read()
+    let (n) = n_tokens.read()
     let (A) = get_A()
+    let (a : _A) = _A_.read()
     let (D) = get_D(A , n, _xp)
     let Ann = A * n
     
-    let counter = 0
-    let _c = 0
-    let (S) = find_S(counter, i, j, _dx, xp_len, _xp)
-    let (_c_) = find_C(xp_len, _xp, counter, D, n)
+    let (_s) = array_sum(xp_len + 1, _xp)
+    let S = _s + _dx - _xp[i] - _xp[j]
+    let (_c_) = find_C(xp_len, _xp, D, D)
 
-    let c = _c_ * D * A / (Ann * n)
-    let b = S * D * A / Ann
+    let c = _c_ * D * a.precision / (Ann * n)
+    let b = S + D * a.precision / Ann
  
     let count = 255
     let _y = D
 
     let (y) = y_recursion(count, D, c, b, _y)
- 
+    
     return(y)
 end
 
@@ -153,21 +161,24 @@ func y_recursion{
     # y_new > y_prev
     let (x) = is_le(y_prev, y_new - 1) 
         if x != 0:
+           
             let (z) = is_le(y_new - y_prev, 1)
                 if z != 0: 
                     return(y_new)
                 end
-            else: 
-                let (a) = is_le(y_prev - y_new, 1)
-                if a != 0:
-                    return(y_new)
-                end
-        end
+            end    
+             
+
+    let (a) = is_le(y_prev - y_new, 1)
+        if a != 0:
+            return(y_new)
+        end 
 
     let (res) = y_recursion(count - 1, D, c, b, y_new)
     return(res)
 end
 
+# this is broken - need to fix
 func find_S{
         syscall_ptr : felt*,
         pedersen_ptr : HashBuiltin*,
@@ -193,27 +204,22 @@ func find_S{
     return(res)
 end
 
+# this is broken need to fix
 func find_C{
         syscall_ptr : felt*,
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
-}(xp_len : felt, _xp : felt*, counter : felt, D : felt, n : felt) -> (res : felt):
+}(xp_len : felt, _xp : felt*, D : felt, C : felt) -> (res : felt):
     alloc_locals
 
+    let (n) = n_tokens.read()
+
     if xp_len == 0:
-        return(0)
+        return(C)
     end
-
-    let c = counter
-
-        if c == 0:
-            let y = c * D / (_xp[xp_len] * n)
-            let (res) = find_C(xp_len - 1, _xp, y, D, n)
-            return(res)
-        end
-
-    let y = c * D / (_xp[xp_len] * n)
-    let (res) = find_C(xp_len - 1, _xp, y, D, n)
+    
+    let c = C * D / (_xp[xp_len] * n) 
+    let (res) = find_C(xp_len - 1, _xp, D, c)
     return(res)
 end
 
@@ -226,7 +232,7 @@ func get_D{
 }(A : felt, xp_len : felt, _xp : felt*) -> (D : felt):
     alloc_locals 
 
-    let (S) =  array_sum(xp_len, _xp)
+    let (S) =  array_sum(xp_len + 1, _xp)
 
     if S == 0:
         return(0)
@@ -236,7 +242,8 @@ func get_D{
     let Ann = A * xp_len
     let count = 255
 
-    let (D) = d_recursion(count, S, D, Ann, xp_len, _xp)
+    let (D_P) = D_P_recursion(D, D, xp_len, _xp)
+    let (D) = d_recursion(count, S, D, Ann, xp_len, _xp, D_P)
 
     return(D)
 end
@@ -245,34 +252,32 @@ func d_recursion{
         syscall_ptr : felt*,
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
-}(count : felt, S : felt, D : felt, Ann : felt, xp_len : felt, _xp : felt*) -> (res : felt):
+}(count : felt, S : felt, D_prev : felt, Ann : felt, xp_len : felt, _xp : felt*, D_P : felt) -> (res : felt):
     alloc_locals
-    
+    let (a) = _A_.read() 
     let (n) = n_tokens.read()
     # should never reach 0 
     if count == 0:
         return(0)
     end
-
-    let (A) = get_A()
-    let (D_P) = D_P_recursion(D, D, xp_len, _xp)
-    let D_new = (Ann * S / A + D_P * n) * D / ((Ann - A) * D / A + (n + 1) * D_P)
+    
+    let D_new = (Ann * S / a.precision + D_P * n) * D_prev / ((Ann - a.precision) * D_prev / a.precision + (n + 1) * D_P)
 
     # D_new > D
-    let (y) = is_le(D, D_new - 1)
+    let (y) = is_le(D_prev, D_new - 1)
         if y != 0:
-            let (z) = is_le(D_new - D, 1)
+            let (z) = is_le(D_new - D_prev, 1)
                 if z != 0:
                     return(D_new)
                 end
         end
 
-    let (x) = is_le(D - D_new, 1)
+    let (x) = is_le(D_prev - D_new, 1)
         if x != 0:
             return(D_new)
         end
 
-    let (res) = d_recursion(count - 1, S, D_new, Ann, xp_len, _xp)
+    let (res) = d_recursion(count - 1, S, D_new, Ann, xp_len, _xp, D_P)
     return(res)
 end
 
@@ -285,7 +290,7 @@ func D_P_recursion{
 
     let (n) = n_tokens.read()
     if xp_len == 0:
-        return(0)
+        return(D_P)
     end
 
     let res = D_P * D / (_xp[xp_len] * n)
@@ -394,5 +399,6 @@ func init_pool{
     init_pool(n - 1)
     return()
 end
+
 
 
