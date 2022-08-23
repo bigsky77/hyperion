@@ -90,7 +90,7 @@ func test_exchange{
     let (token_b) = token_b_instance.deployed()
     
     let (res) = IHyperion.exchange(hyperion, 1, 2, 100)
-    assert res = 1100
+    assert res = 3
     return()
 end
 
