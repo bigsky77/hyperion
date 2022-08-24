@@ -125,12 +125,45 @@ func test_exchange{
     
     let (y, i_balance, j_balance, dy) = IHyperion.exchange(hyperion, 1, 2, 100)
     
-    # these numbers are wrong 
-    #helpful for understanding where the formulas are breaking down
     assert y = 2024
     assert i_balance = 1100
     assert j_balance = 924
     assert dy = 76
+
+    # for building intuition
+
+    let (y_1, i_1, j_1, dy_1) = IHyperion.exchange(hyperion, 1, 2, 300)
+    
+    # pool balance 
+    assert y_1 = 2015
+    # token_a balance
+    assert i_1 = 1400
+    # token_b balance
+    assert j_1 = 615
+    # amount recieved
+    assert dy_1 = 309
+
+    let (y_2, j_2, i_2, dy_2) = IHyperion.exchange(hyperion, 2, 1, 500)
+
+    # pool balance
+    assert y_2 = 2006
+    # token_b balance
+    assert j_2 = 1115
+    # token_a balance
+    assert i_2 = 891
+    # amount recieved
+    assert dy_2 = 509
+    
+    let (y_3, j_3, i_3, dy_3) = IHyperion.exchange(hyperion, 2, 1, 200)
+
+    # pool balance
+    assert y_3 = 1997
+    # token_b balance
+    assert j_3 = 1315
+    # token_a balance
+    assert i_3 = 682
+    # amount recieved
+    assert dy_3 = 209
     
     return()
 end
