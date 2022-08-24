@@ -9,6 +9,7 @@
 from starkware.cairo.common.cairo_builtins import HashBuiltin
 from starkware.cairo.common.alloc import alloc
 from starkware.cairo.common.math_cmp import is_le
+from starkware.cairo.common.math import unsigned_div_rem
 from starkware.cairo.common.registers import get_fp_and_pc
 
 from starkware.starknet.common.syscalls import get_block_timestamp
@@ -168,10 +169,12 @@ func get_y{
     let (A) = get_A()
     let (a : _A) = _A_.read()
     let (D) = get_D(A , n, _xp)
+    
     let Ann = A * n
     
     let (_s) = array_sum(xp_len + 1, _xp)
     let S = _s + _dx - _xp[i] - _xp[j]
+    
     let (_c_) = find_C(xp_len, _xp, D, D)
 
     let c = _c_ * D * a.precision / (Ann * n)
@@ -190,6 +193,7 @@ func y_recursion{
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
 }(count : felt, D : felt, c : felt, b : felt, y : felt) -> (res : felt):
+    alloc_locals
 
     # should never reach zero
     if count == 0:
@@ -197,8 +201,9 @@ func y_recursion{
     end
 
     let y_prev = y
-    let y_new = (y*y + c)/ (2 * y + b - D)
- 
+    let (_new, _) = unsigned_div_rem((y * y + c), (2 * y + b - D))
+    local y_new = _new 
+
     # y_new > y_prev
     let (x) = is_le(y_prev, y_new - 1) 
         if x != 0:
@@ -214,34 +219,8 @@ func y_recursion{
             return(y_new)
         end 
 
-    let (res) = y_recursion(count - 1, D, c, b, y_new)
-    return(res)
-end
-
-# this is broken - need to fix
-func find_S{
-        syscall_ptr : felt*,
-        pedersen_ptr : HashBuiltin*,
-        range_check_ptr
-}(counter : felt, i : felt, j : felt, x : felt, xp_len : felt, _xp : felt*) -> (res : felt):
-    alloc_locals
-    
-    if xp_len == 0:
-        return(0)
-    end
-
-    if j == xp_len:
-        return(0)
-    end
-
-    if i == xp_len:
-        let (res) = find_S(x, i, j, x, xp_len - 1, _xp)
-        return(res)
-    end
-
-    let y = counter + _xp[xp_len]
-    let (res) = find_S(y, i, j, x, xp_len - 1, _xp)
-    return(res)
+    #let (res) = y_recursion(count - 1, D, c, b, y_new)
+    return(y)
 end
 
 # this is broken need to fix
