@@ -9,7 +9,7 @@
 from starkware.cairo.common.cairo_builtins import HashBuiltin
 from starkware.cairo.common.alloc import alloc
 from starkware.cairo.common.math_cmp import is_le
-from starkware.cairo.common.math import unsigned_div_rem
+from starkware.cairo.common.math import unsigned_div_rem, assert_not_equal, assert_not_zero 
 from starkware.cairo.common.registers import get_fp_and_pc
 
 from starkware.starknet.common.syscalls import get_block_timestamp
@@ -156,6 +156,19 @@ func exchange{
     return(pool_balance, i_balance, j_balance, dy)
 end
 
+### ============== mint ==============
+
+@external 
+func mint{
+        syscall_ptr : felt*,
+        pedersen_ptr : HashBuiltin*,
+        range_check_ptr
+}() -> (res : felt):
+     
+
+    return('todo')
+end
+
 ### =============== _y ===============
 
 func get_y{
@@ -165,6 +178,11 @@ func get_y{
 }(i : felt, j : felt, _dx : felt, xp_len : felt, _xp : felt*) -> (y : felt):
     alloc_locals
 
+    assert_not_equal(i, j)
+    assert_not_zero(i)
+    assert_not_zero(j)
+
+    # 
     let (n) = n_tokens.read()
     let (A) = get_A()
     let (a : _A) = _A_.read()
@@ -173,22 +191,22 @@ func get_y{
     let Ann = A * n
     
     let (_s) = array_sum(xp_len + 1, _xp)
-    let S = _s + _dx - _xp[i] - _xp[j]
+    tempvar S = _s + _dx - _xp[i] - _xp[j]
     
     let (_c_) = find_C(xp_len, _xp, D, D)
     
     # a_div_ann = a.precision / (ann * a) 
     let (_, a_div_ann) = unsigned_div_rem(a.precision, (Ann * n))
     
-    # bc a.precision / (Ann * n) will always be a fraction we divide by the remainder  
+    # bc a.precision / (Ann * n) will always be a fraction   
     let (c, _) = unsigned_div_rem((_c_ * D), a_div_ann)
-    let (_, _a_div) = unsigned_div_rem(a.precision, Ann) 
+    let (_, _a_rem) = unsigned_div_rem(a.precision, Ann) 
     # same thing here - divide by the remainder
-    let (d_b, _) = unsigned_div_rem(D, _a_div)
-    let b = S + d_b
+    let (d_b, _) = unsigned_div_rem(D, _a_rem)
+    tempvar b = S + d_b
 
-    let count = 255
-    let _y = D
+    tempvar count = 255
+    tempvar _y = D
 
     let (y) = y_recursion(count, D, c, b, _y)
     
