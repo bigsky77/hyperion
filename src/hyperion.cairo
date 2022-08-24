@@ -182,10 +182,9 @@ func get_y{
     
     # bc a.precision / (Ann * n) will always be a fraction we divide by the remainder  
     let (c, _) = unsigned_div_rem((_c_ * D), a_div_ann)
-    
-    let (_, _b) = unsigned_div_rem(a.precision, Ann) 
+    let (_, _a_div) = unsigned_div_rem(a.precision, Ann) 
     # same thing here - divide by the remainder
-    let (d_b, _) = unsigned_div_rem(D, _b)
+    let (d_b, _) = unsigned_div_rem(D, _a_div)
     let b = S + d_b
 
     let count = 255
@@ -244,8 +243,8 @@ func find_C{
         return(C)
     end
     
-    let (d_, _) = unsigned_div_rem(D, (_xp[xp_len] * n))
-    let c = C * d_
+    let (d_div, _) = unsigned_div_rem(D, (_xp[xp_len] * n))
+    let c = C * d_div
     let (res) = find_C(xp_len - 1, _xp, D, c)
     return(res)
 end
