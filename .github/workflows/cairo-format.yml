@@ -15,7 +15,7 @@ jobs:
       - name: Check Cairo formatting
         uses: milancermak/cairo-format-action@v1
         # pass additional options
-        # with:
-        #   target: src/starknet/contracts
-        #   cairo-version: 0.9.1
-        #   cairo-format-args: "--one_item_per_line"
+        with:
+           target: src
+           cairo-version: 0.9.1
+           cairo-format-args: "--one_item_per_line"
