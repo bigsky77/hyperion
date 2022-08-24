@@ -78,9 +78,9 @@ func test_get_token{
 end
 
 @external
-func test_xp{
+func test_D{
         syscall_ptr : felt*,
-        #pedersen_ptr : HashBuiltin*,
+        pedersen_ptr : HashBuiltin*,
         range_check_ptr,
 }():
     alloc_locals
@@ -89,10 +89,48 @@ func test_xp{
     let (token_a) = token_a_instance.deployed()
     let (token_b) = token_b_instance.deployed()
     
-    let (pool_balance, i_balance, j_balance) = IHyperion.exchange(hyperion, 1, 2, 100)
-    assert pool_balance = 1 
-    assert i_balance = 1000
+    let (D) = IHyperion.view_D(hyperion)
+    assert D = 2000
+    return()
+end
+
+@external
+func test_A{
+        syscall_ptr : felt*,
+        pedersen_ptr : HashBuiltin*,
+        range_check_ptr,
+}():
+    alloc_locals
+
+    let (hyperion) = hyperion_instance.deployed()
+    let (token_a) = token_a_instance.deployed()
+    let (token_b) = token_b_instance.deployed()
+    
+    let (A) = IHyperion.view_A(hyperion)
+    assert A = 10000
+    return()
+end
+
+@external
+func test_exchange{
+        syscall_ptr : felt*,
+        pedersen_ptr : HashBuiltin*,
+        range_check_ptr,
+}():
+    alloc_locals
+
+    let (hyperion) = hyperion_instance.deployed()
+    let (token_a) = token_a_instance.deployed()
+    let (token_b) = token_b_instance.deployed()
+    
+    let (y, i_balance, j_balance) = IHyperion.exchange(hyperion, 1, 2, 100)
+    
+    # these numbers are wrong 
+    #helpful for understanding where the formulas are breaking down
+    assert y = 0
+    assert i_balance = 1100
     assert j_balance = 1000
+    
     return()
 end
 

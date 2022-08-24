@@ -79,6 +79,47 @@ func get_token{
     return(token_address)
 end
 
+@view 
+func get_xp{
+        syscall_ptr : felt*,
+        pedersen_ptr : HashBuiltin*,
+        range_check_ptr
+}() -> (res_len : felt, res : felt*):
+    alloc_locals
+    
+    let (n) = n_tokens.read()
+    let (arr) = alloc()
+    assert [arr + 0] = 0
+    let (res) = _xp(n, arr)
+    return(n, res)
+end
+
+@view
+func view_D{
+        syscall_ptr : felt*,
+        pedersen_ptr : HashBuiltin*,
+        range_check_ptr
+}() -> (D : felt):
+    alloc_locals
+
+    let (xp_len, _xp) = get_xp()
+    let (A) = get_A()
+
+    let (res) = get_D(A, xp_len, _xp)
+    return(res)
+end
+
+@view
+func view_A{
+        syscall_ptr : felt*,
+        pedersen_ptr : HashBuiltin*,
+        range_check_ptr
+}() -> (A : felt):
+    alloc_locals
+    let (A) = get_A()
+    return(A)
+end
+
 ### ============ exchange ============
 
 # param: i   index of the token to send
@@ -89,7 +130,7 @@ func exchange{
         syscall_ptr : felt*,
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
-}(i : felt, j : felt, _dx : felt) -> (pool_balance : felt, i_balance : felt, j_balance : felt):
+}(i : felt, j : felt, _dx : felt) -> (y : felt, i_balance : felt, j_balance : felt):
     alloc_locals
 
     let (arr) = alloc()
@@ -168,7 +209,6 @@ func y_recursion{
                 end
             end    
              
-
     let (a) = is_le(y_prev - y_new, 1)
         if a != 0:
             return(y_new)

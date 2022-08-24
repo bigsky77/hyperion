@@ -14,6 +14,13 @@ namespace IHyperion:
 
     func exchange(i : felt, j : felt, _dx : felt) -> (pool_balance : felt, i_balance : felt, j_balance : felt):
     end
+
+    func view_D() -> (res : felt):
+    end
+
+    func view_A() -> (res : felt):
+    end
+
 end
 
 
