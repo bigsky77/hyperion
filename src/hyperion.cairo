@@ -131,7 +131,7 @@ func exchange{
         syscall_ptr : felt*,
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
-}(i : felt, j : felt, _dx : felt) -> (y : felt, i_balance : felt, j_balance : felt):
+}(i : felt, j : felt, _dx : felt) -> (pool_balance : felt, i_balance : felt, j_balance : felt, dy : felt):
     alloc_locals
 
     let (arr) = alloc()
@@ -153,7 +153,7 @@ func exchange{
     let (j_balance) = token_balance.read(j)
     let pool_balance = i_balance + j_balance 
 
-    return(y, i_balance, j_balance)
+    return(pool_balance, i_balance, j_balance, dy)
 end
 
 ### =============== _y ===============
@@ -176,10 +176,18 @@ func get_y{
     let S = _s + _dx - _xp[i] - _xp[j]
     
     let (_c_) = find_C(xp_len, _xp, D, D)
+    
+    # a_div_ann = a.precision / (ann * a) 
+    let (_, a_div_ann) = unsigned_div_rem(a.precision, (Ann * n))
+    
+    # bc a.precision / (Ann * n) will always be a fraction we divide by the remainder  
+    let (c, _) = unsigned_div_rem((_c_ * D), a_div_ann)
+    
+    let (_, _b) = unsigned_div_rem(a.precision, Ann) 
+    # same thing here - divide by the remainder
+    let (d_b, _) = unsigned_div_rem(D, _b)
+    let b = S + d_b
 
-    let c = _c_ * D * a.precision / (Ann * n)
-    let b = S + D * a.precision / Ann
- 
     let count = 255
     let _y = D
 
@@ -219,11 +227,10 @@ func y_recursion{
             return(y_new)
         end 
 
-    #let (res) = y_recursion(count - 1, D, c, b, y_new)
-    return(y)
+    let (res) = y_recursion(count - 1, D, c, b, y_new)
+    return(res)
 end
 
-# this is broken need to fix
 func find_C{
         syscall_ptr : felt*,
         pedersen_ptr : HashBuiltin*,
@@ -237,7 +244,8 @@ func find_C{
         return(C)
     end
     
-    let c = C * D / (_xp[xp_len] * n) 
+    let (d_, _) = unsigned_div_rem(D, (_xp[xp_len] * n))
+    let c = C * d_
     let (res) = find_C(xp_len - 1, _xp, D, c)
     return(res)
 end
@@ -280,7 +288,14 @@ func d_recursion{
         return(0)
     end
     
-    let D_new = (Ann * S / a.precision + D_P * n) * D_prev / ((Ann - a.precision) * D_prev / a.precision + (n + 1) * D_P)
+    # weird naming convention here - need to clean up 
+    let (t, _) = unsigned_div_rem(S, a.precision)
+    let (m, _) = unsigned_div_rem(D_prev, a.precision)
+    tempvar numerator = (Ann * t + D_P * n) * D_prev
+    tempvar denominator = ((Ann - a.precision) * m + (n + 1) * D_P)
+
+    let (_d, _) = unsigned_div_rem(numerator, denominator)
+    local D_new = _d
 
     # D_new > D
     let (y) = is_le(D_prev, D_new - 1)
@@ -312,7 +327,8 @@ func D_P_recursion{
         return(D_P)
     end
 
-    let res = D_P * D / (_xp[xp_len] * n)
+    let (x, _) = unsigned_div_rem(D, (_xp[xp_len] * n))
+    let res = D_P * x 
     let (D_P_) = D_P_recursion(res, D, xp_len - 1, _xp)
     return(D_P_)
 end
@@ -342,10 +358,10 @@ func get_A{
             # assert A1 > A0
             let (y) = is_le(A0, A1 - 1)
             if y != 0:
-                let A = A0 + (A1 - A0) * (block_time_stamp - t0) / (t1 - t0)
+                let (A, _) = unsigned_div_rem((A0 + (A1 - A0) * (block_time_stamp - t0)), (t1 - t0))
                 return(A)
             else:
-                let A = A0 - (A0 - A1) * (block_time_stamp - t0) / (t1 - t0)
+                let (A, _) = unsigned_div_rem((A0 - (A0 - A1) * (block_time_stamp - t0)), (t1 - t0))
                 return(A)
             end 
         end

@@ -123,13 +123,14 @@ func test_exchange{
     let (token_a) = token_a_instance.deployed()
     let (token_b) = token_b_instance.deployed()
     
-    let (y, i_balance, j_balance) = IHyperion.exchange(hyperion, 1, 2, 100)
+    let (y, i_balance, j_balance, dy) = IHyperion.exchange(hyperion, 1, 2, 100)
     
     # these numbers are wrong 
     #helpful for understanding where the formulas are breaking down
-    assert y = 0
+    assert y = 2024
     assert i_balance = 1100
-    assert j_balance = 1000
+    assert j_balance = 924
+    assert dy = 76
     
     return()
 end
