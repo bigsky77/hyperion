@@ -20,8 +20,10 @@ from src.interfaces.IHyperion import IHyperion
 const USER = 'user'
 const TOKEN_NAME_A = 'ajax'
 const TOKEN_NAME_B = 'shryke'
+const TOKEN_NAME_C = 'voyage'
 const SYMBOL_A = 'AJX'
 const SYMBOL_B = 'SHRK'
+const SYMBOL_C = 'VOY'
 const DECIMALS = 18
 const SUPPLY_HI = 100000
 const SUPPLY_LO = 0
@@ -35,7 +37,9 @@ func __setup__{syscall_ptr : felt*}():
     
     tempvar token_a
     tempvar token_b
-    tempvar hyperion    
+    tempvar token_c
+    tempvar hyperion
+    tempvar hyperion_multi_coin
     %{
         ids.token_a = deploy_contract(
             "./lib/cairo_contracts/src/openzeppelin/token/erc20/presets/ERC20.cairo", 
@@ -46,11 +50,22 @@ func __setup__{syscall_ptr : felt*}():
             "./lib/cairo_contracts/src/openzeppelin/token/erc20/presets/ERC20.cairo", 
             [ids.TOKEN_NAME_B, ids.SYMBOL_B, ids.DECIMALS, ids.SUPPLY_LO, ids.SUPPLY_HI, ids.USER]).contract_address
         context.token_b = ids.token_b
-        
+       
+        ids.token_c = deploy_contract(
+            "./lib/cairo_contracts/src/openzeppelin/token/erc20/presets/ERC20.cairo",  
+            [ids.TOKEN_NAME_C, ids.SYMBOL_C, ids.DECIMALS, ids.SUPPLY_LO, ids.SUPPLY_HI, ids.USER]).contract_address
+        context.token_c = ids.token_c
+
         ids.hyperion = deploy_contract(
             "./src/hyperion.cairo",
             [ids.ARR_LEN, ids.token_a, ids.token_b, 100]).contract_address
         context.hyperion = ids.hyperion
+        
+        ids.hyperion_multi_coin = deploy_contract(
+            "./src/hyperion.cairo",
+            [ids.ARR_LEN + 1, ids.token_a, ids.token_b, ids.token_c, 100]).contract_address
+        context.hyperion_multi_coin = ids.hyperion_multi_coin
+
     %}
 
     return()
@@ -168,6 +183,29 @@ func test_exchange{
     return()
 end
 
+@external
+func test_multi_coin{
+        syscall_ptr : felt*,
+        pedersen_ptr : HashBuiltin*,
+        range_check_ptr
+}():
+    alloc_locals
+
+    let (hyperion_multi_coin) = hyperion_multi_coin_instance.deployed()
+    let (token_a) = token_a_instance.deployed()
+    let (token_b) = token_b_instance.deployed()
+    let (token_c) = token_c_instance.deployed()
+
+    let (y, i_balance, j_balance, dy) = IHyperion.exchange(hyperion_multi_coin, 1, 3, 100)
+    
+    assert y = 0
+    assert i_balance = 0
+    assert j_balance = 0
+    assert dy = 0
+
+    return()
+end
+
 ### ======== token-contracts =========
 
 namespace hyperion_instance:
@@ -177,6 +215,15 @@ namespace hyperion_instance:
         return (contract=hyperion)
     end
             
+end
+
+namespace hyperion_multi_coin_instance:
+    func deployed() -> (contract : felt):
+        tempvar hyperion_multi_coin
+        %{ ids.hyperion_multi_coin = context.hyperion_multi_coin %}
+        return (contract=hyperion_multi_coin)
+    end
+
 end
 
 namespace token_a_instance:
@@ -194,5 +241,15 @@ namespace token_b_instance:
         %{ ids.token_b = context.token_b %}
         return (token_contract=token_b)
     end
+
+end
+
+namespace token_c_instance:
+    func deployed() -> (token_contract : felt):
+        tempvar token_c
+        %{ ids.token_c = context.token_c %}
+        return (token_contract=token_c)
+    end
+
 end
 

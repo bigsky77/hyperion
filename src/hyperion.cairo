@@ -163,10 +163,37 @@ func mint{
         syscall_ptr : felt*,
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
-}() -> (res : felt):
-     
+}(amounts_len : felt, amounts : felt*, tokens_len : felt, tokens : felt*,   ) -> (res : felt):
+    alloc_locals
+
+    let (a) = get_A()
+    local amp = a
+    let (old_balances) = _xp(tokens_len, tokens)
+    let (D0) = get_D(amp, tokens_len, tokens)
+
+    let (new_balance) = update_balances(amounts_len, amounts)
+
+    let (D1) = get_D(amp, amounts_len, new_balance)
 
     return('todo')
+end
+
+func update_balances{
+        syscall_ptr : felt*,
+        pedersen_ptr : HashBuiltin*,
+        range_check_ptr
+}(amounts_len : felt, amounts : felt*) -> (arr : felt*):
+    alloc_locals
+
+    if amounts_len == 0:
+        return(amounts)
+    end
+
+    let _amount = amounts[amounts_len]
+    token_balance.write(amounts_len, _amount)
+    
+    let (res) = update_balances(amounts_len - 1, amounts)
+    return(res)
 end
 
 ### =============== _y ===============
