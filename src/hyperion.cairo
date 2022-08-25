@@ -6,19 +6,53 @@
 
 ### ========== dependencies ==========
 
+# cairo std-lib
 from starkware.cairo.common.cairo_builtins import HashBuiltin
 from starkware.cairo.common.alloc import alloc
 from starkware.cairo.common.math_cmp import is_le
-from starkware.cairo.common.math import unsigned_div_rem, assert_not_equal, assert_not_zero 
-from starkware.cairo.common.registers import get_fp_and_pc
+from starkware.cairo.common.math import unsigned_div_rem, assert_not_equal, assert_not_zero, assert_lt 
+from starkware.cairo.common.uint256 import Uint256, uint256_lt
 
-from starkware.starknet.common.syscalls import get_block_timestamp
+# starknet std-lb
+from starkware.starknet.common.syscalls import get_block_timestamp, get_contract_address, get_caller_address
+
+# openzeppelin std-lib
+from openzeppelin.token.erc20.IERC20 import IERC20
+from openzeppelin.token.erc20.library import ERC20
+from openzeppelin.access.ownable.library import Ownable 
 
 from src.utils.structs import _A
 
 ### ============= const ==============
 
 const PRECISION = 100
+const POOL_NAME = 'hyperion' # set at compile time
+const POOL_SYMBOL = 'HYPE' # set at compile time
+const DECIMALS = 18
+
+### =========== interface ============
+
+@contract_interface
+namespace IHyperion: 
+    func get_token(token_index : felt) -> (token_address : felt):
+    end
+
+    func exchange(i : felt, j : felt, _dx : felt) -> (pool_balance : felt, i_balance : felt, j_balance : felt, dy : felt):
+    end
+
+    func mint():
+    end
+
+    func burn():
+    end
+
+    func view_D() -> (res : felt):
+    end
+
+    func view_A() -> (res : felt):
+    end
+
+end
 
 ### ======= storage variables ========
 
@@ -34,8 +68,26 @@ end
 func token_balance(token_index :  felt) -> (balance : felt):
 end
 
+@storage_var
+func pool_token() -> (address : felt):
+end
+
 @storage_var 
 func _A_() -> (a : _A):
+end
+
+### ============= events =============
+
+@event
+func liquidity_added(pool_balance : felt, amount_minted : felt, blocktime : felt):
+end
+
+@event
+func liquidity_removed(pool_balance : felt, amount_in : felt, amount_out : felt, blocktime : felt):
+end
+
+@event
+func swap(pool_balance : felt, amount_in : felt, amount_out : felt, blocktime : felt):
 end
 
 ### ========== constructor ===========
@@ -63,6 +115,10 @@ func constructor{
     )
 
     _A_.write(a)
+
+    let (address_this) = get_contract_address()
+    ERC20.initializer(POOL_NAME, POOL_SYMBOL, DECIMALS)
+    Ownable.initializer(owner=address_this)
 
     return()
 end
@@ -166,6 +222,9 @@ func mint{
 }(amounts_len : felt, amounts : felt*, tokens_len : felt, tokens : felt*,   ) -> (res : felt):
     alloc_locals
 
+    let(address_this) = get_contract_address()
+    let (user_address) = get_caller_address()
+
     let (a) = get_A()
     local amp = a
     let (old_balances) = _xp(tokens_len, tokens)
@@ -174,8 +233,33 @@ func mint{
     let (new_balance) = update_balances(amounts_len, amounts)
 
     let (D1) = get_D(amp, amounts_len, new_balance)
+    
+    assert_lt(D0, D1)
+    
+    let (total_supply) = IERC20.totalSupply(address_this)
+    
+    # only execute loop if liquidity has alread been minted
+    let (x) = uint256_lt(Uint256(0, 0), total_supply)
+    if x != 0:
+        let (n) = n_tokens.read()
+        ideal_balance_loop(n, old_balances, D1, D0) 
+    end
 
+    # need to calculate D2 - placeholder for now
+    tempvar mint_amount = total_supply * (D1 - D0) / D0
+    ERC20._mint(user_address, mint_amount)
+    
     return('todo')
+end
+
+# in place for when fees are implimented
+func ideal_balance_loop{
+        syscall_ptr : felt*,
+        pedersen_ptr : HashBuiltin*,
+        range_check_ptr
+}(balances_len : felt, balances : felt*, D1, D0) -> (ideal_balance : felt): 
+    let (ideal_balance) = D1 * balances[balances_len] / D0 
+    return(ideal_balance)
 end
 
 func update_balances{
@@ -208,8 +292,7 @@ func get_y{
     assert_not_equal(i, j)
     assert_not_zero(i)
     assert_not_zero(j)
-
-    # 
+ 
     let (n) = n_tokens.read()
     let (A) = get_A()
     let (a : _A) = _A_.read()
@@ -235,12 +318,12 @@ func get_y{
     tempvar count = 255
     tempvar _y = D
 
-    let (y) = y_recursion(count, D, c, b, _y)
+    let (y) = y_loop(count, D, c, b, _y)
     
     return(y)
 end
 
-func y_recursion{
+func y_loop{
         syscall_ptr : felt*,
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
@@ -271,7 +354,7 @@ func y_recursion{
             return(y_new)
         end 
 
-    let (res) = y_recursion(count - 1, D, c, b, y_new)
+    let (res) = y_loop(count - 1, D, c, b, y_new)
     return(res)
 end
 
@@ -313,13 +396,13 @@ func get_D{
     let Ann = A * xp_len
     let count = 255
 
-    let (D_P) = D_P_recursion(D, D, xp_len, _xp)
-    let (D) = d_recursion(count, S, D, Ann, xp_len, _xp, D_P)
+    let (D_P) = D_P_loop(D, D, xp_len, _xp)
+    let (D) = D_loop(count, S, D, Ann, xp_len, _xp, D_P)
 
     return(D)
 end
 
-func d_recursion{
+func D_loop{
         syscall_ptr : felt*,
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
@@ -355,11 +438,11 @@ func d_recursion{
             return(D_new)
         end
 
-    let (res) = d_recursion(count - 1, S, D_new, Ann, xp_len, _xp, D_P)
+    let (res) = D_loop(count - 1, S, D_new, Ann, xp_len, _xp, D_P)
     return(res)
 end
 
-func D_P_recursion{
+func D_P_loop{
         syscall_ptr : felt*,
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
@@ -373,7 +456,7 @@ func D_P_recursion{
 
     let (x, _) = unsigned_div_rem(D, (_xp[xp_len] * n))
     let res = D_P * x 
-    let (D_P_) = D_P_recursion(res, D, xp_len - 1, _xp)
+    let (D_P_) = D_P_loop(res, D, xp_len - 1, _xp)
     return(D_P_)
 end
 
