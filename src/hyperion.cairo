@@ -265,14 +265,16 @@ func mint{
     let (local user_address) = get_caller_address()
 
     let (A) = get_A()
-    let (xp_len, _xp) = get_xp()
-    let (D0) = get_D(A, xp_len, _xp)
-    let (D1) = get_D(A, tokens_len, tokens)
-    
-    assert_lt(D0, D1)
+    let (old_balances_len, old_balances) = get_xp()
+    let (D0) = get_D(A, old_balances_len, old_balances)
 
     let total_supply : Uint256 = Hyperion_Token.totalSupply(pool_address)
 
+    let (arr) = alloc()
+    let (new_balances_len, new_balances) = update_balance_loop(tokens_len, tokens, 0, arr)
+    let (D1) = get_D(A, new_balances_len, new_balances)
+    assert_lt(D0, D1)
+    
     let (y) = is_nn(0)
     if y == 0:
         let mint_amount : Uint256 = split_64(D1)
@@ -280,11 +282,6 @@ func mint{
         return()
     end
     
-    let (arr) = alloc()
-
-    let (new_balances_len, new_balances) = update_balance_loop(tokens_len, tokens, 0, arr)
-    let (D2) = get_D(A, new_balances_len, new_balances)
-
     return()
 end
 
@@ -292,10 +289,18 @@ func ideal_balance_loop{
         syscall_ptr : felt*,
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
-}():
+}(
+    D0 : felt, 
+    D1 : felt, 
+    old_balances_len : felt, 
+    old_balances : felt*, 
+    new_balances_len : felt, 
+    new_balances : felt*) -> (mint_amount : felt):
     alloc_locals
+
+    let ideal_balance = D1 * old_balances[old_balances_len] / D0
     
-    return()
+    return('todo')
 end
 
 func update_balance_loop{
