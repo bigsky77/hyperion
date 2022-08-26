@@ -279,8 +279,11 @@ func mint{
         Hyperion_Token._mint(pool_address, user_address, mint_amount)
         return()
     end
+    
+    let (arr) = alloc()
 
-    ideal_balance_loop()
+    let (new_balances_len, new_balances) = update_balance_loop(tokens_len, tokens, 0, arr)
+    let (D2) = get_D(A, new_balances_len, new_balances)
 
     return()
 end
@@ -293,6 +296,27 @@ func ideal_balance_loop{
     alloc_locals
     
     return()
+end
+
+func update_balance_loop{
+        syscall_ptr : felt*,
+        pedersen_ptr : HashBuiltin*,
+        range_check_ptr
+}(tokens_len : felt, tokens : felt*, arr_len : felt, arr : felt*) -> (len : felt, _tokens : felt*):
+    alloc_locals
+
+    if tokens_len == 0:
+        return(arr_len, tokens)
+    end
+
+    
+    let x = tokens[tokens_len]
+    let (y) = token_balance.read(tokens_len)
+    token_balance.write(tokens_len, x + y)
+    
+    assert [arr + tokens_len] = x + y
+    let (arr_len, res) = update_balance_loop(tokens_len - 1, tokens, arr_len + 1, arr)
+    return(arr_len, res)
 end
 
 ### =============== _y ===============
