@@ -258,7 +258,7 @@ func mint{
         syscall_ptr : felt*,
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
-}(tokens_len : felt, tokens : felt*) -> ():
+}(tokens_len : felt, tokens : felt*):
     alloc_locals
     
     let (local pool_address) = get_contract_address()
@@ -271,16 +271,27 @@ func mint{
     
     assert_lt(D0, D1)
 
-    let supply : Uint256 = Hyperion_Token.totalSupply(pool_address)
-     
-    # if first deposit
-    #let (y) = is_nn(supply.low)
-    #    if y == 0:
+    let total_supply : Uint256 = Hyperion_Token.totalSupply(pool_address)
 
+    let (y) = is_nn(0)
+    if y == 0:
         let mint_amount : Uint256 = split_64(D1)
         Hyperion_Token._mint(pool_address, user_address, mint_amount)
-    #end
+        return()
+    end
 
+    ideal_balance_loop()
+
+    return()
+end
+
+func ideal_balance_loop{
+        syscall_ptr : felt*,
+        pedersen_ptr : HashBuiltin*,
+        range_check_ptr
+}():
+    alloc_locals
+    
     return()
 end
 
