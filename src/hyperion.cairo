@@ -9,9 +9,12 @@
 # cairo std-lib
 from starkware.cairo.common.cairo_builtins import HashBuiltin
 from starkware.cairo.common.alloc import alloc
-from starkware.cairo.common.math_cmp import is_le
-from starkware.cairo.common.math import unsigned_div_rem, assert_not_equal, assert_not_zero, assert_lt 
-from starkware.cairo.common.uint256 import Uint256, uint256_lt
+from starkware.cairo.common.math_cmp import is_le, is_nn
+from starkware.cairo.common.math import unsigned_div_rem, assert_not_equal, assert_not_zero, assert_lt  
+from starkware.cairo.common.uint256 import Uint256, uint256_lt, uint256_add, uint256_mul, split_64
+
+# starkware-lang std
+from starkware.cairo.lang.compiler.lib.registers import get_ap, get_fp_and_pc
 
 # starknet std-lb
 from starkware.starknet.common.syscalls import get_block_timestamp, get_contract_address, get_caller_address
@@ -51,7 +54,18 @@ namespace IHyperion:
 
     func view_A() -> (res : felt):
     end
+end
 
+@contract_interface
+namespace Hyperion_Token:
+    func _mint(recipient : felt, amount : Uint256):
+    end
+
+    func _burn():
+    end
+
+    func totalSupply() -> (total_supply : Uint256):
+    end
 end
 
 ### ======= storage variables ========
@@ -79,15 +93,15 @@ end
 ### ============= events =============
 
 @event
-func liquidity_added(pool_balance : felt, amount_minted : felt, blocktime : felt):
+func Liquidity_Added(pool_balance : felt, amount_minted : felt, blocktime : felt):
 end
 
 @event
-func liquidity_removed(pool_balance : felt, amount_in : felt, amount_out : felt, blocktime : felt):
+func Liquidity_Removed(pool_balance : felt, amount_in : felt, amount_out : felt, blocktime : felt):
 end
 
 @event
-func swap(pool_balance : felt, amount_in : felt, amount_out : felt, blocktime : felt):
+func Swap(amount_in : Uint256, amount_out : Uint256):
 end
 
 ### ========== constructor ===========
@@ -190,6 +204,7 @@ func exchange{
 }(i : felt, j : felt, _dx : felt) -> (pool_balance : felt, i_balance : felt, j_balance : felt, dy : felt):
     alloc_locals
 
+    let (user_address) = get_caller_address()
     let (arr) = alloc()
     # need to set first value of array to zero for arr_sum to work
     assert [arr + 0] = 0
@@ -199,85 +214,74 @@ func exchange{
     let x = old_balances[i] + _dx
     let (y) = get_y(i, j, x, arr_len, old_balances) 
     
-    let dy = old_balances[j] - y - 1 
+    let _dy = old_balances[j] - y - 1 
 
     # change balances 
     token_balance.write(i, x)
-    token_balance.write(j, old_balances[j] - dy)
+    token_balance.write(j, old_balances[j] - _dy)
     
     let (i_balance) = token_balance.read(i)
     let (j_balance) = token_balance.read(j)
     let pool_balance = i_balance + j_balance 
+    
+    execute_exchange(user_address, i, _dx, j, _dy)
 
-    return(pool_balance, i_balance, j_balance, dy)
+    return(pool_balance, i_balance, j_balance, _dy)
+end
+
+func execute_exchange{
+        syscall_ptr : felt*,
+        pedersen_ptr : HashBuiltin*,
+        range_check_ptr
+}(user_address : felt, i : felt, _dx : felt, j : felt, _dy : felt):
+    alloc_locals
+    
+    let (pool_address) = get_contract_address()
+    let (token_in_address) = tokens.read(i)
+    let (token_out_address) = tokens.read(j)
+
+    let  dx : Uint256 = split_64(_dx)
+    let  dy : Uint256 = split_64(_dy)
+    
+    IERC20.transferFrom(token_in_address, user_address, pool_address, dx)
+    IERC20.transferFrom(token_out_address, pool_address, user_address, dy)
+    
+    Swap.emit(dx, dy)    
+    return()
 end
 
 ### ============== mint ==============
 
-@external 
+# low level function that should only be called by router contract after safety checks
+@external
 func mint{
         syscall_ptr : felt*,
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
-}(amounts_len : felt, amounts : felt*, tokens_len : felt, tokens : felt*,   ) -> (res : felt):
+}(tokens_len : felt, tokens : felt*) -> ():
     alloc_locals
+    
+    let (local pool_address) = get_contract_address()
+    let (local user_address) = get_caller_address()
 
-    let(address_this) = get_contract_address()
-    let (user_address) = get_caller_address()
-
-    let (a) = get_A()
-    local amp = a
-    let (old_balances) = _xp(tokens_len, tokens)
-    let (D0) = get_D(amp, tokens_len, tokens)
-
-    let (new_balance) = update_balances(amounts_len, amounts)
-
-    let (D1) = get_D(amp, amounts_len, new_balance)
+    let (A) = get_A()
+    let (xp_len, _xp) = get_xp()
+    let (D0) = get_D(A, xp_len, _xp)
+    let (D1) = get_D(A, tokens_len, tokens)
     
     assert_lt(D0, D1)
-    
-    let (total_supply) = IERC20.totalSupply(address_this)
-    
-    # only execute loop if liquidity has alread been minted
-    let (x) = uint256_lt(Uint256(0, 0), total_supply)
-    if x != 0:
-        let (n) = n_tokens.read()
-        ideal_balance_loop(n, old_balances, D1, D0) 
-    end
 
-    # need to calculate D2 - placeholder for now
-    tempvar mint_amount = total_supply * (D1 - D0) / D0
-    ERC20._mint(user_address, mint_amount)
-    
-    return('todo')
-end
+    let supply : Uint256 = Hyperion_Token.totalSupply(pool_address)
+     
+    # if first deposit
+    #let (y) = is_nn(supply.low)
+    #    if y == 0:
 
-# in place for when fees are implimented
-func ideal_balance_loop{
-        syscall_ptr : felt*,
-        pedersen_ptr : HashBuiltin*,
-        range_check_ptr
-}(balances_len : felt, balances : felt*, D1, D0) -> (ideal_balance : felt): 
-    let (ideal_balance) = D1 * balances[balances_len] / D0 
-    return(ideal_balance)
-end
+        let mint_amount : Uint256 = split_64(D1)
+        Hyperion_Token._mint(pool_address, user_address, mint_amount)
+    #end
 
-func update_balances{
-        syscall_ptr : felt*,
-        pedersen_ptr : HashBuiltin*,
-        range_check_ptr
-}(amounts_len : felt, amounts : felt*) -> (arr : felt*):
-    alloc_locals
-
-    if amounts_len == 0:
-        return(amounts)
-    end
-
-    let _amount = amounts[amounts_len]
-    token_balance.write(amounts_len, _amount)
-    
-    let (res) = update_balances(amounts_len - 1, amounts)
-    return(res)
+    return()
 end
 
 ### =============== _y ===============

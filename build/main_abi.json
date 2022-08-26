@@ -1,5 +1,132 @@
 [
     {
+        "members": [
+            {
+                "name": "low",
+                "offset": 0,
+                "type": "felt"
+            },
+            {
+                "name": "high",
+                "offset": 1,
+                "type": "felt"
+            }
+        ],
+        "name": "Uint256",
+        "size": 2,
+        "type": "struct"
+    },
+    {
+        "data": [
+            {
+                "name": "from_",
+                "type": "felt"
+            },
+            {
+                "name": "to",
+                "type": "felt"
+            },
+            {
+                "name": "value",
+                "type": "Uint256"
+            }
+        ],
+        "keys": [],
+        "name": "Transfer",
+        "type": "event"
+    },
+    {
+        "data": [
+            {
+                "name": "owner",
+                "type": "felt"
+            },
+            {
+                "name": "spender",
+                "type": "felt"
+            },
+            {
+                "name": "value",
+                "type": "Uint256"
+            }
+        ],
+        "keys": [],
+        "name": "Approval",
+        "type": "event"
+    },
+    {
+        "data": [
+            {
+                "name": "previousOwner",
+                "type": "felt"
+            },
+            {
+                "name": "newOwner",
+                "type": "felt"
+            }
+        ],
+        "keys": [],
+        "name": "OwnershipTransferred",
+        "type": "event"
+    },
+    {
+        "data": [
+            {
+                "name": "pool_balance",
+                "type": "felt"
+            },
+            {
+                "name": "amount_minted",
+                "type": "felt"
+            },
+            {
+                "name": "blocktime",
+                "type": "felt"
+            }
+        ],
+        "keys": [],
+        "name": "Liquidity_Added",
+        "type": "event"
+    },
+    {
+        "data": [
+            {
+                "name": "pool_balance",
+                "type": "felt"
+            },
+            {
+                "name": "amount_in",
+                "type": "felt"
+            },
+            {
+                "name": "amount_out",
+                "type": "felt"
+            },
+            {
+                "name": "blocktime",
+                "type": "felt"
+            }
+        ],
+        "keys": [],
+        "name": "Liquidity_Removed",
+        "type": "event"
+    },
+    {
+        "data": [
+            {
+                "name": "amount_in",
+                "type": "Uint256"
+            },
+            {
+                "name": "amount_out",
+                "type": "Uint256"
+            }
+        ],
+        "keys": [],
+        "name": "Swap",
+        "type": "event"
+    },
+    {
         "inputs": [
             {
                 "name": "arr_len",
@@ -8,10 +135,122 @@
             {
                 "name": "arr",
                 "type": "felt*"
+            },
+            {
+                "name": "A",
+                "type": "felt"
             }
         ],
         "name": "constructor",
         "outputs": [],
         "type": "constructor"
+    },
+    {
+        "inputs": [
+            {
+                "name": "token_index",
+                "type": "felt"
+            }
+        ],
+        "name": "get_token",
+        "outputs": [
+            {
+                "name": "token_address",
+                "type": "felt"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "get_xp",
+        "outputs": [
+            {
+                "name": "res_len",
+                "type": "felt"
+            },
+            {
+                "name": "res",
+                "type": "felt*"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "view_D",
+        "outputs": [
+            {
+                "name": "D",
+                "type": "felt"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "view_A",
+        "outputs": [
+            {
+                "name": "A",
+                "type": "felt"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "name": "i",
+                "type": "felt"
+            },
+            {
+                "name": "j",
+                "type": "felt"
+            },
+            {
+                "name": "_dx",
+                "type": "felt"
+            }
+        ],
+        "name": "exchange",
+        "outputs": [
+            {
+                "name": "pool_balance",
+                "type": "felt"
+            },
+            {
+                "name": "i_balance",
+                "type": "felt"
+            },
+            {
+                "name": "j_balance",
+                "type": "felt"
+            },
+            {
+                "name": "dy",
+                "type": "felt"
+            }
+        ],
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "name": "tokens_len",
+                "type": "felt"
+            },
+            {
+                "name": "tokens",
+                "type": "felt*"
+            }
+        ],
+        "name": "mint",
+        "outputs": [],
+        "type": "function"
     }
 ]
