@@ -252,6 +252,17 @@
     {
         "inputs": [
             {
+                "name": "_amount",
+                "type": "felt"
+            }
+        ],
+        "name": "burn",
+        "outputs": [],
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
                 "name": "_fee",
                 "type": "felt"
             }

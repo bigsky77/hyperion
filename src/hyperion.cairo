@@ -44,7 +44,7 @@ namespace IHyperion:
     func mint():
     end
 
-    func burn():
+    func burn(_amount : Uint256):
     end
 
     func view_D() -> (res : felt):
@@ -59,7 +59,7 @@ namespace Hyperion_Token:
     func _mint(recipient : felt, amount : Uint256):
     end
 
-    func _burn():
+    func _burn(_amount : Uint256):
     end
 
     func totalSupply() -> (total_supply : Uint256):
@@ -369,6 +369,60 @@ func update_balance_loop{
     assert balances[tokens_len] = balance + tokens[tokens_len]
     update_balance_loop(tokens_len - 1, tokens, balances_len, balances)
     return(balances_len, balances)
+end
+
+### ============== burn ==============
+
+@external
+func burn{
+        syscall_ptr : felt*,
+        pedersen_ptr : HashBuiltin*,
+        range_check_ptr
+}(_amount : felt):
+    alloc_locals
+  
+    let (hyperion_token) = get_contract_address()
+    let total_supply = Hyperion_Token.totalSupply(hyperion_token)
+    
+    let (old_balances_len, old_balances) = get_xp()
+
+    value_loop(_amount, old_balances_len, old_balances)
+    
+    let burn_amount : Uint256 = split_64(_amount)
+    Hyperion_Token._burn(hyperion_token, burn_amount)
+    
+    return()
+end
+
+func value_loop{
+        syscall_ptr : felt*,
+        pedersen_ptr : HashBuiltin*,
+        range_check_ptr
+}(_amount : felt, old_balances_len : felt, old_balances : felt*):
+    alloc_locals
+    
+    let (hyperion_pool) = get_contract_address()
+    let (caller_address) = get_caller_address() 
+
+    if old_balances_len == 0:
+        return()
+    end
+     
+    # hack will not work IRL
+    local supply : felt
+    let total_supply : Uint256 = Hyperion_Token.totalSupply(hyperion_pool)
+    assert supply = total_supply.low
+
+    let (value) = alloc()
+    let (_, x) = unsigned_div_rem(_amount, supply)
+    let (y, _) = unsigned_div_rem(old_balances[old_balances_len], x)
+    assert value[old_balances_len] =  y
+    
+    let (token) = get_token(old_balances_len)
+    let amount : Uint256 = split_64(value[old_balances_len])
+    IERC20.transferFrom(token, hyperion_pool, caller_address, amount)
+    value_loop(_amount, old_balances_len - 1, old_balances)
+    return()
 end
 
 ### =============== _y ===============
