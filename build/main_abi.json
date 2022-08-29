@@ -72,12 +72,8 @@
     {
         "data": [
             {
-                "name": "pool_balance",
-                "type": "felt"
-            },
-            {
                 "name": "amount_minted",
-                "type": "felt"
+                "type": "Uint256"
             },
             {
                 "name": "blocktime",

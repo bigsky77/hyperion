@@ -99,7 +99,7 @@ end
 ### ============= events =============
 
 @event
-func Liquidity_Added(pool_balance : felt, amount_minted : felt, blocktime : felt):
+func Liquidity_Added(amount_minted : Uint256, blocktime : felt):
 end
 
 @event
@@ -293,8 +293,20 @@ func mint{
         return()
     end
 
+    let (_future_balances) = alloc()
+    let _future_balances_len = tokens_len
+    let (future_balances_len, future_balances) =ideal_balance_loop(_future_balances_len, _future_balances, new_balances_len, new_balances)
 
-   
+    let (D2) = get_D(A, future_balances_len, future_balances)
+    let (_, _mint) = unsigned_div_rem((D2 - D0), D0)
+    let mint : Uint256 = split_64(_mint)
+    let mint_amount : Uint256 = uint256_mul(total_supply, mint)
+    
+    Hyperion_Token._mint(pool_address, user_address, mint_amount) 
+    let (time) = get_block_timestamp()
+
+    Liquidity_Added.emit(mint_amount, time)
+    
     return()
 end
 
@@ -302,36 +314,46 @@ func ideal_balance_loop{
         syscall_ptr : felt*,
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
-}(
-    D0 : felt, 
-    D1 : felt, 
-    old_balances_len : felt, 
-    old_balances : felt*, 
+}( 
+    future_balances_len : felt, 
+    future_balances : felt*, 
     new_balances_len : felt, 
-    new_balances : felt*) -> (future_balances : felt):
+    new_balances : felt*) -> (future_balances_len : felt, future_balances : felt*):
     alloc_locals
 
+    if new_balances_len == 0:
+        return(future_balances_len, future_balances)
+    end
+
     let (_fee) = admin_fee.read()
-    let (n) = n_tokens.read() 
+    let (n) = n_tokens.read()
+    let (A) = get_A()
 
-    let (coins_denominator) = unsigned_div_rem(n, (4 * (n - 1)))
-    let fee = _fee * coins_denominator
+    let (old_balances_len, old_balances) = get_xp()
+    let (D0) = get_D(A, old_balances_len, old_balances)
+    let (D1) = get_D(A, new_balances_len, new_balances)
 
-    let ideal_balance = D1 * old_balances[old_balances_len] / D0
+    let (_, coins_denominator) = unsigned_div_rem(n, (4 * (n - 1)))
+    let (fee, _) = unsigned_div_rem(_fee, coins_denominator)
+
+    let (_, div) = unsigned_div_rem(old_balances[new_balances_len], D0)
+    let (ideal_balance, _) = unsigned_div_rem(D1, div)
     
     local difference : felt
     let (y) = is_le(new_balances[new_balances_len], ideal_balance)
         
         if y == 0:
-            difference = ideal_balance - new_balances[new_balances_len]
+            assert difference = ideal_balance - new_balances[new_balances_len]
         else:
-            difference = new_balances[new_balances_len] - ideal_balance
+            assert difference = new_balances[new_balances_len] - ideal_balance
         end
 
-    let (x) = unsigned_div_rem(difference, FEE_DENOMINATOR)
+    let (x, _) = unsigned_div_rem(difference, FEE_DENOMINATOR)
     let fee = _fee * x
-    assert future_balance[new_balances_len] = new_balances[new_balances_len] - fee    
-    return('todo')
+    assert future_balances[new_balances_len] = new_balances[new_balances_len] - fee     
+    
+    let(future_balances_len, future_balances) = ideal_balance_loop(future_balances_len, future_balances, new_balances_len - 1, new_balances)
+    return(future_balances_len, future_balances)
 end
 
 func update_balance_loop{
