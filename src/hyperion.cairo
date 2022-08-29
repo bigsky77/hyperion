@@ -26,6 +26,7 @@ from src.utils.structs import _A
 ### ============= const ==============
 
 const PRECISION = 100
+const FEE_DENOMINATOR = 1000
 const POOL_NAME = 'hyperion' # set at compile time
 const POOL_SYMBOL = 'HYPE' # set at compile time
 const DECIMALS = 18
@@ -87,6 +88,14 @@ end
 func _A_() -> (a : _A):
 end
 
+@storage_var
+func admin_fee() -> (fee : felt):
+end
+
+@storage_var 
+func owner_address() -> (address : felt):
+end
+
 ### ============= events =============
 
 @event
@@ -130,6 +139,9 @@ func constructor{
     let (address_this) = get_contract_address()
     ERC20.initializer(POOL_NAME, POOL_SYMBOL, DECIMALS)
     Ownable.initializer(owner=address_this)
+
+    let (owner) = get_caller_address()
+    owner_address.write(owner)
 
     return()
 end
@@ -266,19 +278,23 @@ func mint{
     let (D0) = get_D(A, old_balances_len, old_balances)
 
     let total_supply : Uint256 = Hyperion_Token.totalSupply(pool_address)
+    let zero : Uint256 = Uint256(0, 0)
 
-    let (arr) = alloc()
-    let (new_balances_len, new_balances) = update_balance_loop(tokens_len, tokens, 0, arr)
+    let (balances) = alloc()
+    let balances_len = tokens_len
+    let (new_balances_len, new_balances) = update_balance_loop(tokens_len, tokens, balances_len, balances)
     let (D1) = get_D(A, new_balances_len, new_balances)
     assert_lt(D0, D1)
     
-    let (y) = is_nn(0)
+    let (y) = uint256_lt(zero, total_supply)
     if y == 0:
         let mint_amount : Uint256 = split_64(D1)
         Hyperion_Token._mint(pool_address, user_address, mint_amount)
         return()
     end
-    
+
+
+   
     return()
 end
 
@@ -292,11 +308,29 @@ func ideal_balance_loop{
     old_balances_len : felt, 
     old_balances : felt*, 
     new_balances_len : felt, 
-    new_balances : felt*) -> (mint_amount : felt):
+    new_balances : felt*) -> (future_balances : felt):
     alloc_locals
+
+    let (_fee) = admin_fee.read()
+    let (n) = n_tokens.read() 
+
+    let (coins_denominator) = unsigned_div_rem(n, (4 * (n - 1)))
+    let fee = _fee * coins_denominator
 
     let ideal_balance = D1 * old_balances[old_balances_len] / D0
     
+    local difference : felt
+    let (y) = is_le(new_balances[new_balances_len], ideal_balance)
+        
+        if y == 0:
+            difference = ideal_balance - new_balances[new_balances_len]
+        else:
+            difference = new_balances[new_balances_len] - ideal_balance
+        end
+
+    let (x) = unsigned_div_rem(difference, FEE_DENOMINATOR)
+    let fee = _fee * x
+    assert future_balance[new_balances_len] = new_balances[new_balances_len] - fee    
     return('todo')
 end
 
@@ -304,21 +338,15 @@ func update_balance_loop{
         syscall_ptr : felt*,
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
-}(tokens_len : felt, tokens : felt*, arr_len : felt, arr : felt*) -> (len : felt, _tokens : felt*):
-    alloc_locals
-
+}(tokens_len : felt, tokens : felt*, balances_len : felt, balances : felt*) -> (new_balances_len : felt, new_balances : felt*):
     if tokens_len == 0:
-        return(arr_len, tokens)
+        return(balances_len, balances)
     end
 
-    
-    let x = tokens[tokens_len]
-    let (y) = token_balance.read(tokens_len)
-    token_balance.write(tokens_len, x + y)
-    
-    assert [arr + tokens_len] = x + y
-    let (arr_len, res) = update_balance_loop(tokens_len - 1, tokens, arr_len + 1, arr)
-    return(arr_len, res)
+    let (balance) = token_balance.read(tokens_len)
+    assert balances[tokens_len] = balance + tokens[tokens_len]
+    update_balance_loop(tokens_len - 1, tokens, balances_len, balances)
+    return(balances_len, balances)
 end
 
 ### =============== _y ===============
@@ -537,6 +565,26 @@ func get_A{
     return(A1)
 end
 
+### ============= admin ==============
+
+@external 
+func set_fee{
+        syscall_ptr : felt*,
+        pedersen_ptr : HashBuiltin*,
+        range_check_ptr
+}(_fee : felt):
+    let (caller) = get_caller_address()
+    let (owner) = owner_address.read()
+
+    with_attr error_message("Only Owner"):
+        assert caller = owner
+    end
+    
+    admin_fee.write(_fee)
+    return()
+end
+
+
 ### ============= utils ==============
 
 func set_tokens{
@@ -587,6 +635,9 @@ func array_sum{
     let (sum_of_rest) = array_sum(arr_len - 1, arr + 1)
     return(sum=[arr] + sum_of_rest)
 end
+
+
+### =========== test-utils ===========
 
 # until we build out the pool this will set the initial state for testing
 func init_pool{

@@ -252,5 +252,16 @@
         "name": "mint",
         "outputs": [],
         "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "name": "_fee",
+                "type": "felt"
+            }
+        ],
+        "name": "set_fee",
+        "outputs": [],
+        "type": "function"
     }
 ]
