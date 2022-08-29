@@ -6,6 +6,10 @@
 
 ### ========== dependencies ==========
 
+from starkware.cairo.common.uint256 import Uint256, uint256_check, uint256_eq, uint256_not
+
+### ============= tests ==============
+
 @contract_interface
 namespace IHyperion: 
  
@@ -19,6 +23,9 @@ namespace IHyperion:
     end
 
     func view_A() -> (res : felt):
+    end
+
+    func mint(tokens_len : felt, tokens : felt*) -> (res : Uint256):
     end
 
 end
