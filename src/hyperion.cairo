@@ -290,15 +290,18 @@ func mint{
     assert_lt(D0, D1)
   
     let (y) = uint256_lt(zero, total_supply)
+   
     if y == 0:
         let mint_amount : Uint256 = split_64(D1)
         ERC20._mint(user_address, mint_amount)
-        return(total_supply)
+        return(mint_amount)
     end
 
     let (_future_balances) = alloc()
-    let _future_balances_len = tokens_len
-    let (future_balances_len, future_balances) =ideal_balance_loop(_future_balances_len, _future_balances, new_balances_len, new_balances)
+    assert _future_balances[0] = 0
+
+    let _future_balances_len = old_balances_len
+    let (future_balances_len, future_balances) = ideal_balance_loop(_future_balances_len, _future_balances, new_balances_len, new_balances)
 
     let (D2) = get_D(A, future_balances_len, future_balances)
     let (_, _mint) = unsigned_div_rem((D2 - D0), D0)
@@ -310,7 +313,7 @@ func mint{
 
     Liquidity_Added.emit(mint_amount, time)
     
-    return(total_supply)
+    return(mint_amount)
 end
 
 func ideal_balance_loop{
@@ -338,8 +341,8 @@ func ideal_balance_loop{
 
     let (_, coins_denominator) = unsigned_div_rem(n, (4 * (n - 1)))
     let (fee, _) = unsigned_div_rem(_fee, coins_denominator)
-
-    let (_, div) = unsigned_div_rem(old_balances[new_balances_len - 1], D0)
+    
+    let (_, div) = unsigned_div_rem(old_balances[new_balances_len], D0)
     let (ideal_balance, _) = unsigned_div_rem(D1, div)
     
     local difference : felt
@@ -351,7 +354,7 @@ func ideal_balance_loop{
             assert difference = new_balances[new_balances_len] - ideal_balance
         end
 
-    let (_, x) = unsigned_div_rem(difference, FEE_DENOMINATOR)
+    let (_, x) = unsigned_div_rem(1, FEE_DENOMINATOR)
     let fee = _fee * x
     assert future_balances[new_balances_len] = new_balances[new_balances_len] - fee     
     
