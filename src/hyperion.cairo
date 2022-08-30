@@ -21,6 +21,9 @@ from openzeppelin.token.erc20.IERC20 import IERC20
 from openzeppelin.token.erc20.library import ERC20
 from openzeppelin.access.ownable.library import Ownable 
 
+# wadray-lib
+from lib.wadray.contracts.wad_ray import WadRay
+
 from src.utils.structs import _A
 
 ### ============= const ==============
@@ -304,10 +307,13 @@ func mint{
     let (future_balances_len, future_balances) = ideal_balance_loop(_future_balances_len, _future_balances, new_balances_len, new_balances)
 
     let (D2) = get_D(A, future_balances_len, future_balances)
-    let (_, _mint) = unsigned_div_rem((D2 - D0), D0)
-    let mint : Uint256 = split_64(_mint)
-    let (mint_amount : Uint256, remainder : Uint256) = uint256_unsigned_div_rem(total_supply, mint)
-   
+    
+    # probably should be using wadray for all the maths lolol 
+    let (_mint) = WadRay.wunsigned_div((D2 - D0), D0)
+    let (_total_supply) = WadRay.from_uint(total_supply)
+    let (_amount) = WadRay.wmul(_total_supply, _mint)
+    
+    let (mint_amount) = WadRay.to_uint(_amount)
     ERC20._mint(user_address, mint_amount) 
     let (time) = get_block_timestamp()
 
