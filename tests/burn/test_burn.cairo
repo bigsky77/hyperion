@@ -1,5 +1,5 @@
 ### ==================================
-###      HYPERION LIQUIDITY TESTS
+###        HYPERION BURN TESTS
 ### ==================================
 
 %lang starknet
@@ -25,8 +25,8 @@ const TOKEN_NAME_B = 'shryke'
 const SYMBOL_A = 'AJX'
 const SYMBOL_B = 'SHRK'
 const DECIMALS = 18
-const SUPPLY_HI = 100000
-const SUPPLY_LO = 0
+const SUPPLY_HI = 1
+const SUPPLY_LO = 100000
 const ARR_LEN = 2
 
 ### ============= setup ==============
@@ -55,11 +55,15 @@ func __setup__{syscall_ptr : felt*}():
         context.hyperion = ids.hyperion
     %}
 
+    %{ stop_pranks = [start_prank(ids.USER, contract) for contract in [ids.hyperion, ids.token_a, ids.token_b] ] %}
+    # Setup contracts with admin account
+    %{ [stop_prank() for stop_prank in stop_pranks] %}
+
     return()
 end
 
 @external
-func test_mint{
+func test_burn{
         syscall_ptr : felt*,
         pedersen_ptr : HashBuiltin*,
         range_check_ptr,
@@ -80,12 +84,34 @@ func test_mint{
     assert amount_2[1] = 2000
     assert amount_2[2] = 1000
 
+    %{ stop_prank = start_prank(ids.USER, ids.token_a) %}
+    
+    IERC20.approve(token_a, hyperion, Uint256(100000, 0))
+    
+    %{ stop_prank() %}
+
+    %{ stop_prank = start_prank(ids.USER, ids.token_b) %}
+    
+    IERC20.approve(token_b, hyperion, Uint256(100000, 0))
+    
+    %{ stop_prank() %}
+
+    %{ stop_prank = start_prank(ids.USER) %} 
+
     let result : Uint256 = Uint256(2110, 0) 
     let (res) = IHyperion.mint(hyperion, 2, amount)
     let (res_2) = IHyperion.mint(hyperion, 2, amount_2) 
-    #assert res = result 
-    assert res_2 = result
+    assert res = result 
+    assert res_2 = Uint256(2009, 0)
+    
+    #let (burn) = IHyperion.burn(hyperion, 100)
+    #assert burn = result
+    
+    let (res) = IERC20.balanceOf(token_a, hyperion)
+    assert res = Uint256(2100, 0)
 
+    %{ stop_prank() %}
+    
     return()
 end
 

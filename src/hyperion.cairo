@@ -275,7 +275,7 @@ func mint{
     alloc_locals
     
     let (local pool_address) = get_contract_address()
-    let (local user_address) = get_caller_address()
+    let (local caller_address) = get_caller_address()
 
     let (A) = get_A()
     let (old_balances_len, old_balances) = get_xp()
@@ -287,7 +287,7 @@ func mint{
     let (balances) = alloc()
     assert balances[0] = 0
     let balances_len = tokens_len
-    let (new_balances_len, new_balances) = update_balance_loop(tokens_len, tokens, balances_len, balances)
+    let (new_balances_len, new_balances) = update_balance_loop(caller_address ,tokens_len, tokens, balances_len, balances)
  
     let (D1) = get_D(A, new_balances_len, new_balances)
     assert_lt(D0, D1)
@@ -296,7 +296,7 @@ func mint{
    
     if y == 0:
         let mint_amount : Uint256 = split_64(D1)
-        ERC20._mint(user_address, mint_amount)
+        ERC20._mint(caller_address, mint_amount)
         return(mint_amount)
     end
 
@@ -314,7 +314,7 @@ func mint{
     let (_amount) = WadRay.wmul(_total_supply, _mint)
     
     let (mint_amount) = WadRay.to_uint(_amount)
-    ERC20._mint(user_address, mint_amount) 
+    ERC20._mint(caller_address, mint_amount) 
     let (time) = get_block_timestamp()
 
     Liquidity_Added.emit(mint_amount, time)
@@ -372,16 +372,21 @@ func update_balance_loop{
         syscall_ptr : felt*,
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
-}(tokens_len : felt, tokens : felt*, balances_len : felt, balances : felt*) -> (new_balances_len : felt, new_balances : felt*):
+}(caller_address : felt, tokens_len : felt, _tokens : felt*, balances_len : felt, balances : felt*) -> (new_balances_len : felt, new_balances : felt*):
     if tokens_len == 0:
         return(balances_len, balances)
     end
 
     let (balance) = token_balance.read(tokens_len)
-    assert balances[tokens_len] = balance + tokens[tokens_len - 1]
+    let (token_address) = tokens.read(tokens_len - 1)
+    let (contract_address) = get_contract_address()
+
+    assert balances[tokens_len] = balance + _tokens[tokens_len - 1]
 
     token_balance.write(tokens_len, balances[tokens_len])
-    update_balance_loop(tokens_len - 1, tokens, balances_len, balances)
+    let amount : Uint256 = split_64(_tokens[tokens_len - 1])
+    IERC20.transferFrom(token_address, caller_address, contract_address, amount)
+    update_balance_loop(caller_address, tokens_len - 1, _tokens, balances_len, balances)
     
     return(balances_len, balances)
 end
@@ -393,32 +398,32 @@ func burn{
         syscall_ptr : felt*,
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
-}(_amount : felt):
+}(_amount : felt) -> (res : Uint256):
     alloc_locals
   
     let (hyperion_token) = get_contract_address()
+    let (caller_address) = get_caller_address()
     let total_supply = ERC20.total_supply()
     
     let (old_balances_len, old_balances) = get_xp()
     
     # transfers tokens back to user 
-    value_loop(_amount, old_balances_len, old_balances)
+    value_loop(caller_address, _amount, old_balances_len, old_balances)
     
     let burn_amount : Uint256 = split_64(_amount)
     ERC20._burn(hyperion_token, burn_amount)
     
-    return()
+    return(burn_amount)
 end
 
 func value_loop{
         syscall_ptr : felt*,
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
-}(_amount : felt, old_balances_len : felt, old_balances : felt*):
+}(caller_address : felt, _amount : felt, old_balances_len : felt, old_balances : felt*):
     alloc_locals
     
     let (hyperion_pool) = get_contract_address()
-    let (caller_address) = get_caller_address() 
 
     if old_balances_len == 0:
         return()
@@ -426,7 +431,7 @@ func value_loop{
      
     # hack will not work IRL
     local supply : felt
-    let total_supply : Uint256 = IERC20.totalSupply(hyperion_pool)
+    let total_supply : Uint256 = ERC20.total_supply()
     assert supply = total_supply.low
 
     let (value) = alloc()
@@ -437,9 +442,9 @@ func value_loop{
     let (token) = get_token(old_balances_len)
     let amount : Uint256 = split_64(value[old_balances_len])
     
-    IERC20.transferFrom(token, hyperion_pool, caller_address, amount)
-    value_loop(_amount, old_balances_len - 1, old_balances)
-    
+    IERC20.transfer(token, caller_address, amount)
+
+    value_loop(caller_address, _amount, old_balances_len - 1, old_balances) 
     return()
 end
 

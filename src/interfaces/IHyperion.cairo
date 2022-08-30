@@ -28,6 +28,9 @@ namespace IHyperion:
     func mint(tokens_len : felt, tokens : felt*) -> (res : Uint256):
     end
 
+    func burn(_burn_amount : felt) -> (res : Uint256):
+    end
+
 end
 
 
