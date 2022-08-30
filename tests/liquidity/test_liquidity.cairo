@@ -77,9 +77,7 @@ func test_mint{
 
     let result : Uint256 = Uint256(0, 0) 
     let (res) = IHyperion.mint(hyperion, 3, amount)
-    let (res_2) = IHyperion.mint(hyperion, 3, amount) 
     assert res = result 
-    assert res_2 = result
 
     return()
 end

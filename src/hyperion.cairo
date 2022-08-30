@@ -26,7 +26,8 @@ from src.utils.structs import _A
 ### ============= const ==============
 
 const PRECISION = 100
-const FEE_DENOMINATOR = 1000
+# hack will not work IRL
+const FEE_DENOMINATOR = 100 
 const POOL_NAME = 'hyperion' # set at compile time
 const POOL_SYMBOL = 'HYPE' # set at compile time
 const DECIMALS = 18
@@ -338,7 +339,7 @@ func ideal_balance_loop{
     let (_, coins_denominator) = unsigned_div_rem(n, (4 * (n - 1)))
     let (fee, _) = unsigned_div_rem(_fee, coins_denominator)
 
-    let (_, div) = unsigned_div_rem(old_balances[new_balances_len], D0)
+    let (_, div) = unsigned_div_rem(old_balances[new_balances_len - 1], D0)
     let (ideal_balance, _) = unsigned_div_rem(D1, div)
     
     local difference : felt
@@ -350,7 +351,7 @@ func ideal_balance_loop{
             assert difference = new_balances[new_balances_len] - ideal_balance
         end
 
-    let (x, _) = unsigned_div_rem(difference, FEE_DENOMINATOR)
+    let (_, x) = unsigned_div_rem(difference, FEE_DENOMINATOR)
     let fee = _fee * x
     assert future_balances[new_balances_len] = new_balances[new_balances_len] - fee     
     
@@ -369,7 +370,10 @@ func update_balance_loop{
 
     let (balance) = token_balance.read(tokens_len)
     assert balances[tokens_len] = balance + tokens[tokens_len - 1]
+
+    token_balance.write(tokens_len, balances[tokens_len])
     update_balance_loop(tokens_len - 1, tokens, balances_len, balances)
+    
     return(balances_len, balances)
 end
 
@@ -716,7 +720,6 @@ func array_sum{
     let (sum_of_rest) = array_sum(arr_len - 1, arr + 1)
     return(sum=[arr] + sum_of_rest)
 end
-
 
 ### =========== test-utils ===========
 
