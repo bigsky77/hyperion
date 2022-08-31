@@ -378,7 +378,7 @@ func update_balance_loop{
     end
 
     let (balance) = token_balance.read(tokens_len)
-    let (token_address) = tokens.read(tokens_len - 1)
+    let (token_address) = tokens.read(tokens_len)
     let (contract_address) = get_contract_address()
 
     assert balances[tokens_len] = balance + _tokens[tokens_len - 1]
@@ -411,7 +411,7 @@ func burn{
     value_loop(caller_address, _amount, old_balances_len, old_balances)
     
     let burn_amount : Uint256 = split_64(_amount)
-    ERC20._burn(hyperion_token, burn_amount)
+    ERC20._burn(caller_address, burn_amount)
     
     return(burn_amount)
 end
@@ -746,7 +746,8 @@ func init_pool{
     if n == 0:
         return()
     end
-
+    
+    # ensures no div by zero when funding initial pool
     token_balance.write(n, 1000)
     init_pool(n - 1)
     return()

@@ -74,41 +74,48 @@ func test_burn{
     let (token_a) = token_a_instance.deployed()
     let (token_b) = token_b_instance.deployed()
     
+    let (supply_a) = IERC20.totalSupply(token_a)
+    assert supply_a = Uint256(100000, 1)
+
     let (amount) = alloc()
-    assert amount[0] = 0
+    assert amount[0] = 100
     assert amount[1] = 100
-    assert amount[2] = 100
+   # assert amount[2] = 100
 
     let (amount_2) = alloc()
-    assert amount_2[0] = 0
-    assert amount_2[1] = 2000
-    assert amount_2[2] = 1000
+    assert amount_2[0] = 100
+    assert amount_2[1] = 1000
+   # assert amount_2[2] = 1000
 
     %{ stop_prank = start_prank(ids.USER, ids.token_a) %}
     
     IERC20.approve(token_a, hyperion, Uint256(100000, 0))
-    
+    IERC20.transfer(token_a, hyperion, Uint256(1000, 0))
+
     %{ stop_prank() %}
 
     %{ stop_prank = start_prank(ids.USER, ids.token_b) %}
     
     IERC20.approve(token_b, hyperion, Uint256(100000, 0))
+    IERC20.transfer(token_b, hyperion, Uint256(1000, 0))
     
     %{ stop_prank() %}
 
-    %{ stop_prank = start_prank(ids.USER) %} 
+    %{ stop_prank = start_prank(ids.USER, ids.hyperion) %} 
 
-    let result : Uint256 = Uint256(2110, 0) 
     let (res) = IHyperion.mint(hyperion, 2, amount)
     let (res_2) = IHyperion.mint(hyperion, 2, amount_2) 
-    assert res = result 
-    assert res_2 = Uint256(2009, 0)
+    assert res = Uint256(2200, 0) 
+    assert res_2 = Uint256(1115, 0)
     
-    #let (burn) = IHyperion.burn(hyperion, 100)
-    #assert burn = result
-    
-    let (res) = IERC20.balanceOf(token_a, hyperion)
-    assert res = Uint256(2100, 0)
+    let (res_a) = IERC20.balanceOf(token_a, hyperion)
+    let (res_b) = IERC20.balanceOf(token_b, hyperion)
+
+    assert res_a = Uint256(1200, 0)
+    assert res_b = Uint256(2100, 0)
+
+    let (burn) = IHyperion.burn(hyperion, 100)
+    assert burn = Uint256(100,0) 
 
     %{ stop_prank() %}
     
