@@ -257,7 +257,7 @@ func execute_exchange{
     let  dy : Uint256 = split_64(_dy)
     
     IERC20.transferFrom(token_in_address, user_address, pool_address, dx)
-    IERC20.transferFrom(token_out_address, pool_address, user_address, dy)
+    IERC20.transfer(token_out_address, user_address, dy)
     
     Swap.emit(dx, dy)    
     return()
@@ -429,20 +429,23 @@ func value_loop{
         return()
     end
      
-    # hack will not work IRL
-    local supply : felt
-    let total_supply : Uint256 = ERC20.total_supply()
-    assert supply = total_supply.low
+    let supply : Uint256 = ERC20.total_supply()
 
     let (value) = alloc()
-    let (_, x) = unsigned_div_rem(_amount, supply)
-    let (y, _) = unsigned_div_rem(old_balances[old_balances_len], x)
-    assert value[old_balances_len] =  y
+    
+    let (total_supply) = WadRay.from_uint(supply)
+    let (_value) = WadRay.to_wad(old_balances[old_balances_len])
+    
+    let (amount_div_supply) = WadRay.wunsigned_div(_amount, total_supply)   
+    let (y) = WadRay.wmul(_value, amount_div_supply)
+    let (new_value) = WadRay.wad_to_felt(y)
+    assert value[old_balances_len] = new_value
     
     let (token) = get_token(old_balances_len)
-    let amount : Uint256 = split_64(value[old_balances_len])
-    
-    IERC20.transfer(token, caller_address, amount)
+    let (amount_uint) = WadRay.to_uint(new_value)
+
+    token_balance.write(token, new_value)
+    IERC20.transfer(token, caller_address, amount_uint)
 
     value_loop(caller_address, _amount, old_balances_len - 1, old_balances) 
     return()

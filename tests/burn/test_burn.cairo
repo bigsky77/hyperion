@@ -114,8 +114,34 @@ func test_burn{
     assert res_a = Uint256(1200, 0)
     assert res_b = Uint256(2100, 0)
 
+    let (pool_balance, i_balance, j_balance, dy) = IHyperion.exchange(hyperion, 1, 2, 300)
+    assert pool_balance = 3284
+    assert i_balance = 1500
+    assert j_balance = 1784
+    assert dy = 316
+
     let (burn) = IHyperion.burn(hyperion, 100)
-    assert burn = Uint256(100,0) 
+    assert burn = Uint256(100,0)
+
+    let (res_x) = IERC20.balanceOf(token_a, hyperion)
+    let (res_y) = IERC20.balanceOf(token_b, hyperion)
+    assert res_x = Uint256(1455,0)
+    assert res_y = Uint256(1731,0)
+
+    # broken -  
+    let (burn_2) = IHyperion.burn(hyperion, 500)
+    assert burn_2 = Uint256(500,0)
+    
+    let (res_z) = IERC20.balanceOf(token_a, hyperion)
+    let (res_n) = IERC20.balanceOf(token_b, hyperion)
+    assert res_z = Uint256(1222,0)
+    assert res_n = Uint256(1454,0)
+
+let (pool_balance_1, i_balance_1, j_balance_1, dy_1) = IHyperion.exchange(hyperion, 2, 1, 600)
+    assert pool_balance_1 = 3268
+    assert i_balance_1 = 2384
+    assert j_balance_1 = 884
+    assert dy_1 = 616
 
     %{ stop_prank() %}
     
