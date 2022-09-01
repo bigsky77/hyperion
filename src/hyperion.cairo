@@ -438,13 +438,14 @@ func value_loop{
     
     let (amount_div_supply) = WadRay.wunsigned_div(_amount, total_supply)   
     let (y) = WadRay.wmul(_value, amount_div_supply)
-    let (new_value) = WadRay.wad_to_felt(y)
-    assert value[old_balances_len] = new_value
+    let (new_y) = WadRay.wad_to_felt(y)
+    assert value[old_balances_len] = new_y
     
     let (token) = get_token(old_balances_len)
-    let (amount_uint) = WadRay.to_uint(new_value)
+    let (amount_uint) = WadRay.to_uint(new_y)
+    let new_token_balance =  old_balances[old_balances_len] - new_y
 
-    token_balance.write(token, new_value)
+    token_balance.write(old_balances_len, new_token_balance)
     IERC20.transfer(token, caller_address, amount_uint)
 
     value_loop(caller_address, _amount, old_balances_len - 1, old_balances) 
