@@ -132,10 +132,10 @@ func test_burn{
     let (burn_2) = IHyperion.burn(hyperion, 500)
     assert burn_2 = Uint256(500,0)
     
-    let (res_z) = IERC20.balanceOf(token_a, hyperion)
-    let (res_n) = IERC20.balanceOf(token_b, hyperion)
-    assert res_z = Uint256(1229,0)
-    assert res_n = Uint256(1462,0)
+    let (res_a) = IERC20.balanceOf(token_a, hyperion)
+    let (res_b) = IERC20.balanceOf(token_b, hyperion)
+    assert res_a = Uint256(1229,0)
+    assert res_b = Uint256(1462,0)
 
     # pool balance before is 1222 + 1454 = 2676
 let (pool_balance_1, i_balance_1, j_balance_1, dy_1) = IHyperion.exchange(hyperion, 2, 1, 600)

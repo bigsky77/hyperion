@@ -62,14 +62,13 @@ func create_pool{
     not_zero_address(tokens_len, tokens)
     
     let (calldata) = alloc()
-    assert [calldata] = tokens_len
-    assert [calldata + 1] = tokens[0]
-    assert [calldata + 2] = tokens[1]
-    
+    assert calldata[0] = tokens_len
+    let (_call_data_len, _calldata) = set_calldata(tokens_len, tokens, calldata_lens, calldata)
+
     let (pool_address) = deploy(
         class_hash=hash,
         contract_address_salt=current_salt,
-        constructor_calldata_size=3,
+        constructor_calldata_size= 3,
         constructor_calldata=calldata
     )
     
@@ -77,6 +76,23 @@ func create_pool{
     pool.write(current_salt, pool_address)
     
     return(pool_address)
+end
+
+### ============ internal ============
+
+func set_calldata{
+        syscall_ptr : felt*,
+        pedersen_ptr : HashBuiltin*,
+        range_check_ptr
+}(tokens_len : felt, tokens : felt*, calldata_lens : felt, calldata : felt*) -> (calldata_lens : felt, calldata : felt*):
+    if tokens_len == 0:
+        return(count, tokens)
+    end
+    
+    let count_new = count + 1
+    assert calldata[tokens_len] = tokens[tokens_len]  
+    let (calldata_lens, calldata) = set_calldata(tokens_len - 1, tokens, count_new)
+    return(calldata_lens, calldata)
 end
 
 ### ============= utils ==============
